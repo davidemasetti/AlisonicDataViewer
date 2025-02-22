@@ -44,9 +44,9 @@ class DataValidator:
 
         # DateTime validation
         try:
-            datetime.strptime(data['datetime'], '%Y-%m-%d %H.%M.%S')
+            datetime.strptime(data['datetime'], '%Y-%m-%d %H:%M:%S')
         except ValueError:
-            errors.append("Invalid datetime format")
+            errors.append("Invalid datetime format. Expected format: YYYY-MM-DD HH:MM:SS")
 
         # Temperature validation (3 integers + 1 decimal)
         for temp in data['temperatures']:

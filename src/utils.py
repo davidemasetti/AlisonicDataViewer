@@ -2,7 +2,7 @@ from datetime import datetime
 
 def format_datetime(dt_str: str) -> str:
     try:
-        dt = datetime.strptime(dt_str, '%Y-%m-%d %H.%M.%S')
+        dt = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
         return dt.strftime('%Y-%m-%d %H:%M:%S')
     except ValueError:
         return dt_str
