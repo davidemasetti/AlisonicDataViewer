@@ -6,16 +6,6 @@ def render_header():
     st.title("Cloud Probe Solution Dashboard")
     st.markdown("---")
 
-def render_url_input():
-    url = st.text_input(
-        "XML Data URL",
-        value=st.session_state.get('xml_url', ''),
-        placeholder="Enter the URL of your XML data source"
-    )
-    if url:
-        st.session_state.xml_url = url
-    return url
-
 def render_probe_info(probe_data):
     col1, col2, col3 = st.columns(3)
 

@@ -1,22 +1,19 @@
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Dict, List, Optional
-import requests
 
 class XMLParser:
     @staticmethod
-    def fetch_and_parse_xml(url: str) -> Optional[Dict]:
+    def parse_xml_file(file_path: str) -> Optional[Dict]:
         try:
-            # Fetch XML from URL
-            response = requests.get(url, timeout=5)
-            response.raise_for_status()  # Raise exception for bad status codes
-            xml_content = response.text
-
-            root = ET.fromstring(xml_content)
+            # Parse XML file
+            tree = ET.parse(file_path)
+            root = tree.getroot()
 
             # Get the first probe
             probe = root.find('.//Probe')
             if probe is None:
+                print("No Probe element found in XML")
                 return None
 
             # Parse temperatures
@@ -40,6 +37,6 @@ class XMLParser:
             }
 
             return probe_data
-        except (requests.RequestException, ET.ParseError) as e:
-            st.error(f"Error fetching or parsing XML: {str(e)}")
+        except Exception as e:
+            print(f"Error parsing XML file: {str(e)}")
             return None

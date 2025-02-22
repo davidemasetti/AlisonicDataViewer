@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Settings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+   <Site>
+      <CustomerID>2</CustomerID>
+   </Site>
+   <Probes>
+      <Probe>
+         <Address>012345</Address>
+         <Status>0</Status> <!-- max 2 cifre intere -->
+         <DateTime>2024-12-05 17:15:22</DateTime>
+         <Product>5900.12</Product> <!-- 5 interi + 2 decimali -->
+         <Water>40.23</Water> <!-- 5 interi + 2 decimali -->
+         <Density>1234.56</Density> <!-- 4 interi + 2 decimali -->
+         <Phs></Phs> <!-- NON ANCORA DEFINITO -->
+         <Discriminator>D</Discriminator> <!-- D=diesel; P=benzina; N=non definito -->
+         <Temperatures>
+            <Temperature>12.3</Temperature> <!-- 3 interi + 1 decimale -->
+            <Temperature>12.6</Temperature> <!-- 3 interi + 1 decimale -->
+            <Temperature>15.1</Temperature> <!-- 3 interi + 1 decimale -->
+            <Temperature>18.2</Temperature> <!-- 3 interi + 1 decimale -->
+            <Temperature>13.8</Temperature> <!-- 3 interi + 1 decimale -->
+         </Temperatures>
+      </Probe>
+   </Probes>
+</Settings>
