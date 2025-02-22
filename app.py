@@ -27,6 +27,13 @@ def main():
 
     render_header()
 
+    # Add refresh rate indicator in sidebar
+    st.sidebar.markdown("### Auto-refresh Settings")
+    refresh_rate = st.sidebar.slider("Refresh interval (seconds)", 
+                                   min_value=1, 
+                                   max_value=10, 
+                                   value=1)
+
     # Parse XML from local file
     probe_data = XMLParser.parse_xml_file(XML_FILE)
 
@@ -53,8 +60,12 @@ def main():
     render_measurements(probe_data)
     render_temperature_graph(probe_data['temperatures'])
 
-    # Auto-refresh after 1 second
-    time.sleep(1)
+    # Display last update time
+    st.sidebar.markdown("### Status")
+    st.sidebar.text(f"Last update: {st.session_state.last_update_time}")
+
+    # Auto-refresh using Streamlit's native rerun
+    time.sleep(refresh_rate)
     st.rerun()
 
 if __name__ == "__main__":

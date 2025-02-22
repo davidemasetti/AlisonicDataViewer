@@ -11,7 +11,9 @@ def render_probe_info(probe_data):
 
     with col1:
         st.metric("Probe Address", probe_data['address'])
-        st.metric("Status", probe_data['status'])
+        status_value = probe_data['status']
+        status_color = 'normal' if status_value == '0' else 'off'
+        st.metric("Status", status_value, delta=None, delta_color=status_color)
 
     with col2:
         st.metric("Customer ID", probe_data['customer_id'])
@@ -47,7 +49,8 @@ def render_temperature_graph(temperatures):
         xaxis_title="Sensor Position",
         yaxis_title="Temperature (°C)",
         height=400,
-        margin=dict(l=20, r=20, t=20, b=20)
+        margin=dict(l=20, r=20, t=20, b=20),
+        hovermode='x'
     )
 
     st.plotly_chart(fig, use_container_width=True)
