@@ -46,21 +46,31 @@ class Database:
     def save_measurement(self, probe_data: Dict):
         try:
             with self.conn.cursor() as cur:
+                # Check if measurement already exists for this timestamp
                 cur.execute('''
-                    INSERT INTO measurement_history 
-                    (timestamp, probe_address, status, product, water, density, discriminator, temperatures)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    SELECT COUNT(*) FROM measurement_history 
+                    WHERE timestamp = %s AND probe_address = %s
                 ''', (
                     datetime.strptime(probe_data['datetime'], '%Y-%m-%d %H:%M:%S'),
-                    probe_data['address'],
-                    probe_data['status'],
-                    float(probe_data['product']),
-                    float(probe_data['water']),
-                    float(probe_data['density']),
-                    probe_data['discriminator'],
-                    json.dumps(probe_data['temperatures'])
+                    probe_data['address']
                 ))
-                self.conn.commit()
+
+                if cur.fetchone()[0] == 0:  # Only insert if measurement doesn't exist
+                    cur.execute('''
+                        INSERT INTO measurement_history 
+                        (timestamp, probe_address, status, product, water, density, discriminator, temperatures)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ''', (
+                        datetime.strptime(probe_data['datetime'], '%Y-%m-%d %H:%M:%S'),
+                        probe_data['address'],
+                        probe_data['status'],
+                        float(probe_data['product']),
+                        float(probe_data['water']),
+                        float(probe_data['density']),
+                        probe_data['discriminator'],
+                        json.dumps(probe_data['temperatures'])
+                    ))
+                    self.conn.commit()
         except Exception as e:
             st.error(f"Error saving measurement: {str(e)}")
             self.conn.rollback()
@@ -90,16 +100,3 @@ class Database:
         except Exception as e:
             st.error(f"Error fetching measurement history: {str(e)}")
             return [], 0
-
-    def cleanup_old_records(self):
-        """Remove records older than 1 week"""
-        try:
-            with self.conn.cursor() as cur:
-                cur.execute('''
-                    DELETE FROM measurement_history
-                    WHERE timestamp < NOW() - INTERVAL '1 week'
-                ''')
-                self.conn.commit()
-        except Exception as e:
-            st.error(f"Error cleaning up old records: {str(e)}")
-            self.conn.rollback()

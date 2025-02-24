@@ -15,6 +15,15 @@ from src.ui_components import (
 # Local XML file path
 XML_FILE = "attached_assets/alisonic_probes.xml"
 
+# Initialize database connection using Streamlit's cache
+@st.cache_resource
+def get_database():
+    try:
+        return Database()
+    except Exception as e:
+        st.error(f"Failed to initialize database: {str(e)}")
+        return None
+
 def main():
     # Page config
     st.set_page_config(
@@ -39,7 +48,10 @@ def main():
                                    value=1)
 
     # Initialize database connection
-    db = Database()
+    db = get_database()
+    if db is None:
+        st.error("Could not connect to database. Please check your configuration.")
+        return
 
     # Parse XML from local file
     probe_data = XMLParser.parse_xml_file(XML_FILE)
@@ -63,10 +75,10 @@ def main():
     st.session_state.last_update_time = probe_data['datetime']
 
     # Save measurement to database
-    db.save_measurement(probe_data)
-
-    # Clean up old records (older than 1 week)
-    db.cleanup_old_records()
+    try:
+        db.save_measurement(probe_data)
+    except Exception as e:
+        st.error(f"Failed to save measurement: {str(e)}")
 
     # Render dashboard components
     render_probe_info(probe_data)
