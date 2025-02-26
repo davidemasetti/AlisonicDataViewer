@@ -37,6 +37,8 @@ def main():
         st.session_state.last_update_time = None
     if 'history_page' not in st.session_state:
         st.session_state.history_page = 1
+    if 'selected_probe_index' not in st.session_state:
+        st.session_state.selected_probe_index = 0
 
     render_header()
 
@@ -54,13 +56,26 @@ def main():
         return
 
     # Parse XML from local file
-    probe_data = XMLParser.parse_xml_file(XML_FILE)
+    probe_data_list = XMLParser.parse_xml_file(XML_FILE)
 
-    if probe_data is None:
+    if probe_data_list is None or len(probe_data_list) == 0:
         st.error("Error parsing XML data. Please check the data source.")
         time.sleep(1)
         st.rerun()
         return
+
+    # Add probe selector to sidebar
+    st.sidebar.markdown("### Probe Selection")
+    probe_addresses = [probe['address'] for probe in probe_data_list]
+    selected_probe = st.sidebar.selectbox(
+        "Select Probe",
+        probe_addresses,
+        index=st.session_state.selected_probe_index
+    )
+    st.session_state.selected_probe_index = probe_addresses.index(selected_probe)
+
+    # Get the selected probe data
+    probe_data = probe_data_list[st.session_state.selected_probe_index]
 
     # Validate data
     is_valid, errors = DataValidator.validate_probe_data(probe_data)
