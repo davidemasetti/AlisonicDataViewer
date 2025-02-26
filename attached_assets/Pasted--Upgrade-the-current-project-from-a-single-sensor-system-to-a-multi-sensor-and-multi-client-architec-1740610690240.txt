@@ -1,0 +1,55 @@
+
+Upgrade the current project from a single-sensor system to a multi-sensor and multi-client architecture with the following hierarchy:
+* Alisonic (our project client) → Supplies sensors to final customers.
+* Final customers → Have multiple sites where sensors are installed.
+* Sites → Contain one or more sensors, each measuring a tank.
+* Each sensor has a unique code linking it to the customer and site to ensure correct data segmentation.
+
+🔹 Required Enhancements:
+1️⃣ Database Structure for Multi-Client and Multi-Sensor Support
+* Modify the database structure to support Customers → Sites → Sensors.
+* Each sensor should have a unique identifier linking it to its site and customer.
+* The XML files we receive will contain data for all sensors at a specific site.
+* The database must properly store and retrieve sensor data based on its site and customer.
+* Suggested tables:
+    * clients → Client ID, client name.
+    * sites → Site ID, client ID (FK), site name.
+    * probes → Probe ID, site ID (FK), unique probe code.
+    * measurements → Measurement ID, probe ID (FK), timestamp, recorded values.
+2️⃣ XML Parsing for Multi-Sensor Data
+* Currently, only a single sensor's data is processed.
+* Now, each XML file represents a site and contains multiple sensors.
+* The system must extract all sensors from a given XML and correctly link them to their site and customer.
+* Validate data before importing it.
+3️⃣ Implement a Summary Dashboard
+* The landing page should display an overview of all sensors available to the logged-in customer.
+* Each sensor should show three key data points, such as:
+    * Status (Online/Offline)
+    * Last received measurement timestamp
+    * Main measurement value (e.g., tank level)
+* This summary page should replace the current direct sensor dashboard view.
+4️⃣ Sidebar Navigation to Switch Between Sensors
+* The sidebar menu should allow:
+    * Selecting a site (belonging to the logged-in customer).
+    * Viewing all sensors in that site.
+    * Clicking on a sensor to view its detailed dashboard.
+5️⃣ Authentication and User Access Control
+* Customers should only access their own data and not see other customers' sensors.
+* Upon login:
+    * Users should see only their sites and sensors.
+    * The summary dashboard should display only their assigned sensors.
+
+🛠 Suggested Implementation Approach:
+🔹 Database (PostgreSQL or SQLite)
+* Update structure to support Client → Site → Sensor relationships.
+* Optimize queries to efficiently retrieve all sensors and associated data.
+🔹 XML Parsing
+* Adapt the XML reader to handle multiple sensors within a single XML file.
+* Validate and correctly import sensor data.
+🔹 UI (Streamlit)
+* Summary dashboard displaying an overview of all sensors.
+* Sidebar navigation to switch between sensors and sites.
+* Detailed sensor dashboard for selected sensors.
+🔹 Authentication
+* Implement a simple login system (initially with hardcoded users).
+* Restrict access so each customer only sees their own data.
