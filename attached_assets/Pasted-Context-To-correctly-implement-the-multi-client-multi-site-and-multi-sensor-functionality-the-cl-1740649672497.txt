@@ -1,0 +1,47 @@
+Context:
+To correctly implement the multi-client, multi-site, and multi-sensor functionality, the client has provided two new XML files. These XMLs each represent a site containing multiple sensors (probes).
+
+Our system must be updated to:
+
+Parse and import data from the new XML structure.
+Ensure each sensor is correctly linked to its site and customer.
+Modify the database structure if needed to accommodate this format.
+Allow users to navigate between different sites and sensors via a dashboard menu.
+🔹 Required Enhancements:
+1️⃣ Update XML Parsing to Handle Multi-Sensor Site Files
+
+Adapt the existing XML parsing logic to support multiple sensors within each site file.
+Extract the following key elements from the XML:
+Customer ID (CustomerID)
+Site ID (SiteID)
+Probe ID (Address, unique per sensor)
+Timestamp (DateTime)
+Measurement Data (Product, Water, Density, Temperatures, etc.)
+Ensure the system correctly tags each sensor with its respective site and customer.
+2️⃣ Modify Database Logic (if needed) to Support Multi-Site, Multi-Sensor Hierarchy
+
+Update database schema to properly store:
+customers → Customer ID, name.
+sites → Site ID, Customer ID (FK), name.
+probes → Probe ID, Site ID (FK), unique address.
+measurements → Measurement ID, Probe ID (FK), timestamp, recorded values.
+Ensure historical data is stored per probe to allow time-based tracking.
+3️⃣ Develop a Site & Sensor Selection UI in the Sidebar
+
+The sidebar menu should allow users to:
+View all sites assigned to their customer ID.
+Expand each site to see the list of probes (sensors) within it.
+Click on a probe to load its detailed dashboard.
+4️⃣ Implement a Summary Dashboard as the Default View
+
+Instead of opening a single probe’s dashboard on startup, the main screen should:
+Display a summary of all probes for the selected site.
+Show three key data points per probe, such as:
+Status (OK, Acknowledged, Alarm)
+Last recorded measurement
+Main measurement value (e.g., product level in tank)
+This screen should allow users to quickly select a probe for detailed analysis.
+5️⃣ Testing & Validation
+
+Validate the new XML format before processing to prevent import errors.
+Implement error handling for missing or invalid data.

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Settings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+   <General>
+      <FileVersion>1</FileVersion>					// per poter gestire eventuali future modifiche al file
+   </General>
+   <Site>
+      <ServerID>1</ServerID>
+      <DistributorID>11</DistributorID>				// *** NON SO SE SERVE!!!!!!!
+      <CustomerID>22</CustomerID>
+      <SiteID>12</SiteID>
+   </Site>
+   <Probes>
+      <Probe>
+         <Address>012345</Address>					// sempre a 6 cifre
+         <ProbeStatus>0</ProbeStatus>				// max 2 cifre intere
+         <AlarmStatus>0</AlarmStatus>				// 0=ok (verde); 1=ack (giallo); 2=allarme (rosso);
+         <TankStatus>0</TankStatus>					// max 2 cifre intere (legenda errori in documento specifico)
+         <DateTime>2024-12-05 17.15.22</DateTime>
+         <Ullage>13647.12</Ullage>					// 5 interi + 2 decimali (millimetri)
+         <Product>5900.12</Product>					// 5 interi + 2 decimali (millimetri)
+         <Water>40.23</Water>						// 5 interi + 2 decimali (millimetri)
+         <Density>1234.56</Density>					// 4 interi + 2 decimali (kg/m^3)
+         <Phs></Phs>								// NON ANCORA DEFINITO
+         <Discriminator>D</Discriminator>			// D=diesel; P=benzina; N=non definito
+		 <Temperatures>								// 
+			<Temperature>12.3</Temperature>			// 3 interi + 1 decimale (°C) range -30° / 80°
+			<Temperature>12.6</Temperature>			// 3 interi + 1 decimale (°C) range -30° / 80°
+			<Temperature>15.1</Temperature>			// 3 interi + 1 decimale (°C) range -30° / 80°
+			<Temperature>18.2</Temperature>			// 3 interi + 1 decimale (°C) range -30° / 80°
+			<Temperature>13.8</Temperature>			// 3 interi + 1 decimale (°C) range -30° / 80°
+		 </Temperatures>
+      </Probe>
+      <Probe>
+         <Address>054875</Address>
+         <ProbeStatus>0</ProbeStatus>				
+         <AlarmStatus>1</AlarmStatus>				
+         <TankStatus>0</TankStatus>					
+         <DateTime>2024-12-15 23.33.52</DateTime>
+         <Ullage>1364.12</Ullage>					
+         <Product>3900.12</Product>					
+         <Water>32.23</Water>						
+         <Density>5478.56</Density>					
+         <Phs></Phs>								
+         <Discriminator>D</Discriminator>			
+		 <Temperatures>
+			<Temperature>1.3</Temperature>			
+			<Temperature>1.6</Temperature>			
+			<Temperature>1.1</Temperature>			
+			<Temperature>1.2</Temperature>			
+			<Temperature>1.8</Temperature>			
+		 </Temperatures>
+      </Probe>
+      <Probe>
+         <Address>032321</Address>
+         <ProbeStatus>1</ProbeStatus>				
+         <AlarmStatus>1</AlarmStatus>				
+         <TankStatus>0</TankStatus>					
+         <DateTime>2024-12-07 05.22.37</DateTime>
+         <Ullage>1647.12</Ullage>					
+         <Product>900.12</Product>					
+         <Water>47.23</Water>						
+         <Density>1534.56</Density>					
+         <Phs></Phs>								
+         <Discriminator>D</Discriminator>			
+		 <Temperatures>
+			<Temperature>5.3</Temperature>			
+			<Temperature>5.6</Temperature>			
+			<Temperature>5.1</Temperature>			
+			<Temperature>5.2</Temperature>			
+			<Temperature>5.8</Temperature>			
+		 </Temperatures>
+      </Probe>
+   </Probes>
+</Settings>
