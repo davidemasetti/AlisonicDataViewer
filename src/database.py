@@ -149,7 +149,7 @@ class Database:
                 ''', (
                     probe_id,
                     measurement_timestamp,
-                    probe_data['status'],
+                    probe_data['probe_status'],
                     float(probe_data['product']),
                     float(probe_data['water']),
                     float(probe_data['density']),

@@ -7,7 +7,6 @@ from src.ui_components import (
     render_header,
     render_probe_info,
     render_measurements,
-    render_temperature_graph,
     render_measurement_history,
     render_error_messages
 )
@@ -113,7 +112,6 @@ def main():
     # Render dashboard components
     render_probe_info(probe_data)
     render_measurements(probe_data)
-    render_temperature_graph(probe_data['temperatures'])
 
     # Fetch and display measurement history
     records, total_records = db.get_measurement_history(

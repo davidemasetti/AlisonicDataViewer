@@ -1,7 +1,6 @@
 import streamlit as st
-import plotly.graph_objects as go
-from datetime import datetime
 import pandas as pd
+from datetime import datetime
 
 def render_header():
     st.title("Cloud Probe Solution Dashboard")
@@ -50,31 +49,6 @@ def render_measurements(probe_data):
     with col3:
         st.metric("Density", f"{float(probe_data['density']):.2f} kg/m³")
 
-def render_temperature_graph(temperatures):
-    st.subheader("Temperature Distribution")
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=list(range(1, len(temperatures) + 1)),
-        y=temperatures,
-        mode='lines+markers',
-        name='Temperature'
-    ))
-
-    fig.update_layout(
-        xaxis_title="Sensor Position",
-        yaxis_title="Temperature (°C)",
-        height=400,
-        margin=dict(l=20, r=20, t=20, b=20),
-        hovermode='x',
-        yaxis=dict(
-            range=[-30, 80],  # Set y-axis range to match temperature constraints
-            tickmode='linear',
-            dtick=10
-        )
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
 
 def render_measurement_history(records, total_records, page: int = 1, per_page: int = 200):
     st.subheader("Measurement History")
