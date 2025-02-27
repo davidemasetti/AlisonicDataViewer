@@ -8,12 +8,30 @@ import streamlit as st
 
 class Database:
     def __init__(self):
+        self.conn = None
+        self.connect()
+
+    def connect(self):
+        """Establish database connection"""
         try:
-            self.conn = psycopg2.connect(os.environ['DATABASE_URL'])
-            self.create_tables()
+            if self.conn is None or self.conn.closed:
+                self.conn = psycopg2.connect(os.environ['DATABASE_URL'])
+                self.create_tables()
         except Exception as e:
             st.error(f"Database connection error: {str(e)}")
             raise
+
+    def ensure_connection(self):
+        """Ensure database connection is active"""
+        try:
+            if self.conn is None or self.conn.closed:
+                self.connect()
+            # Test the connection
+            with self.conn.cursor() as cur:
+                cur.execute('SELECT 1')
+        except Exception as e:
+            st.error(f"Lost database connection, attempting to reconnect: {str(e)}")
+            self.connect()
 
     def create_tables(self):
         with self.conn.cursor() as cur:
@@ -98,6 +116,7 @@ class Database:
 
     def save_measurement(self, probe_data: Dict):
         try:
+            self.ensure_connection()
             with self.conn.cursor() as cur:
                 # Get or create probe
                 cur.execute('''
@@ -145,6 +164,7 @@ class Database:
 
     def get_measurement_history(self, page: int = 1, per_page: int = 200) -> tuple[List[Dict], int]:
         try:
+            self.ensure_connection()
             offset = (page - 1) * per_page
             with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
                 # Get total count

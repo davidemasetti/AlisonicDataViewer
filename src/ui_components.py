@@ -11,13 +11,13 @@ def get_alarm_status_info(status: str) -> tuple[str, str]:
     try:
         status_int = int(status)
         if status_int == 0:
-            return "OK", "green"
+            return "OK", "normal"  # Changed from "green" to "normal"
         elif status_int == 1:
-            return "Acknowledged", "yellow"
+            return "Acknowledged", "inverse"  # Changed from "yellow" to "inverse"
         else:
-            return "Alarm", "red"
+            return "Alarm", "off"  # Changed from "red" to "off"
     except ValueError:
-        return "Unknown", "gray"
+        return "Unknown", "off"  # Changed from "gray" to "off"
 
 def render_probe_info(probe_data):
     col1, col2, col3 = st.columns(3)
@@ -25,7 +25,7 @@ def render_probe_info(probe_data):
     with col1:
         st.metric("Probe Address", probe_data['address'])
         alarm_text, alarm_color = get_alarm_status_info(probe_data['alarm_status'])
-        st.metric("Alarm Status", alarm_text, delta=None, delta_color=alarm_color)
+        st.metric("Alarm Status", alarm_text, delta=" ", delta_color=alarm_color)
         st.metric("Probe Status", probe_data['probe_status'])
         st.metric("Tank Status", probe_data['tank_status'])
 
@@ -76,7 +76,7 @@ def render_temperature_graph(temperatures):
 
     st.plotly_chart(fig, use_container_width=True)
 
-def render_measurement_history(records, total_records, page, per_page=200):
+def render_measurement_history(records, total_records, page: int = 1, per_page: int = 200):
     st.subheader("Measurement History")
 
     if not records:
