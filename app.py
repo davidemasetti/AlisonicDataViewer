@@ -12,8 +12,11 @@ from src.ui_components import (
     render_error_messages
 )
 
-# Local XML file path
-XML_FILE = "attached_assets/alisonic_probes.xml"
+# XML file paths
+XML_FILES = [
+    "attached_assets/S1-C435-S1531-20250227095734.XML",
+    "attached_assets/S1-C22-S12-20250227095512.XML"
+]
 
 # Initialize database connection using Streamlit's cache
 @st.cache_resource
@@ -39,6 +42,8 @@ def main():
         st.session_state.history_page = 1
     if 'selected_probe_index' not in st.session_state:
         st.session_state.selected_probe_index = 0
+    if 'selected_xml_index' not in st.session_state:
+        st.session_state.selected_xml_index = 0
 
     render_header()
 
@@ -55,8 +60,18 @@ def main():
         st.error("Could not connect to database. Please check your configuration.")
         return
 
-    # Parse XML from local file
-    probe_data_list = XMLParser.parse_xml_file(XML_FILE)
+    # XML file selector in sidebar
+    st.sidebar.markdown("### Site Selection")
+    selected_xml = st.sidebar.selectbox(
+        "Select Site XML",
+        XML_FILES,
+        index=st.session_state.selected_xml_index,
+        format_func=lambda x: f"Site {x.split('/')[-1].split('.')[0]}"
+    )
+    st.session_state.selected_xml_index = XML_FILES.index(selected_xml)
+
+    # Parse XML from selected file
+    probe_data_list = XMLParser.parse_xml_file(selected_xml)
 
     if probe_data_list is None or len(probe_data_list) == 0:
         st.error("Error parsing XML data. Please check the data source.")

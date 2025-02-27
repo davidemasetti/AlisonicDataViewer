@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Dict, List, Optional
+import streamlit as st
 
 class XMLParser:
     @staticmethod
@@ -13,7 +14,7 @@ class XMLParser:
             # Get site information
             site = root.find('.//Site')
             if site is None:
-                print("No Site element found in XML")
+                st.error("No Site element found in XML")
                 return None
 
             site_info = {
@@ -26,7 +27,7 @@ class XMLParser:
             # Find all probes
             probes = root.findall('.//Probe')
             if not probes:
-                print("No Probe elements found in XML")
+                st.error("No Probe elements found in XML")
                 return None
 
             probe_data_list = []
@@ -49,21 +50,21 @@ class XMLParser:
                     'customer_id': site_info['customer_id'],
                     'site_id': site_info['site_id'],
                     'address': probe.find('Address').text if probe.find('Address') is not None else '',
-                    'probe_status': probe.find('ProbeStatus').text if probe.find('ProbeStatus') is not None else '',
-                    'alarm_status': probe.find('AlarmStatus').text if probe.find('AlarmStatus') is not None else '',
-                    'tank_status': probe.find('TankStatus').text if probe.find('TankStatus') is not None else '',
+                    'probe_status': probe.find('ProbeStatus').text if probe.find('ProbeStatus') is not None else '0',
+                    'alarm_status': probe.find('AlarmStatus').text if probe.find('AlarmStatus') is not None else '0',
+                    'tank_status': probe.find('TankStatus').text if probe.find('TankStatus') is not None else '0',
                     'datetime': datetime_str,
-                    'ullage': probe.find('Ullage').text if probe.find('Ullage') is not None else '',
-                    'product': probe.find('Product').text if probe.find('Product') is not None else '',
-                    'water': probe.find('Water').text if probe.find('Water') is not None else '',
-                    'density': probe.find('Density').text if probe.find('Density') is not None else '',
+                    'ullage': probe.find('Ullage').text if probe.find('Ullage') is not None else '0.0',
+                    'product': probe.find('Product').text if probe.find('Product') is not None else '0.0',
+                    'water': probe.find('Water').text if probe.find('Water') is not None else '0.0',
+                    'density': probe.find('Density').text if probe.find('Density') is not None else '0.0',
                     'phs': probe.find('Phs').text if probe.find('Phs') is not None else '',
-                    'discriminator': probe.find('Discriminator').text if probe.find('Discriminator') is not None else '',
+                    'discriminator': probe.find('Discriminator').text if probe.find('Discriminator') is not None else 'N',
                     'temperatures': temp_values
                 }
                 probe_data_list.append(probe_data)
 
             return probe_data_list
         except Exception as e:
-            print(f"Error parsing XML file: {str(e)}")
+            st.error(f"Error parsing XML file: {str(e)}")
             return None
