@@ -18,6 +18,28 @@ def get_alarm_status_info(status: str) -> tuple[str, str]:
     except ValueError:
         return "Unknown", "off"  # Changed from "gray" to "off"
 
+def render_probe_summary(probe_data_list):
+    st.subheader("Site Overview")
+
+    # Create summary data
+    summary_data = []
+    for probe in probe_data_list:
+        avg_temp = sum(probe['temperatures']) / len(probe['temperatures']) if probe['temperatures'] else 0
+        summary_data.append({
+            'Probe ID': probe['address'],
+            'Ullage (mm)': f"{float(probe['ullage']):.2f}",
+            'Product Volume (mm)': f"{float(probe['product']):.2f}",
+            'Temperature (°C)': f"{avg_temp:.1f}",
+            'Status': get_alarm_status_info(probe['alarm_status'])[0]
+        })
+
+    # Convert to DataFrame for better display
+    if summary_data:
+        df = pd.DataFrame(summary_data)
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("No probe data available for this site.")
+
 def render_probe_info(probe_data):
     col1, col2, col3 = st.columns(3)
 
@@ -48,7 +70,6 @@ def render_measurements(probe_data):
         st.metric("Water", f"{float(probe_data['water']):.2f} mm")
     with col3:
         st.metric("Density", f"{float(probe_data['density']):.2f} kg/m³")
-
 
 def render_measurement_history(records, total_records, page: int = 1, per_page: int = 200):
     st.subheader("Measurement History")

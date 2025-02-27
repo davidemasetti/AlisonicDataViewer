@@ -162,17 +162,22 @@ class Database:
             self.conn.rollback()
             raise
 
-    def get_measurement_history(self, page: int = 1, per_page: int = 200) -> tuple[List[Dict], int]:
+    def get_measurement_history(self, probe_id: str, page: int = 1, per_page: int = 200) -> tuple[List[Dict], int]:
         try:
             self.ensure_connection()
             offset = (page - 1) * per_page
             with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # Get total count
-                cur.execute('SELECT COUNT(*) as count FROM measurements')
+                # Get total count for the specific probe
+                cur.execute('''
+                    SELECT COUNT(*) as count 
+                    FROM measurements m
+                    JOIN probes p ON m.probe_id = p.id
+                    WHERE p.probe_address = %s
+                ''', (probe_id,))
                 result = cur.fetchone()
                 total_records = result['count'] if result else 0
 
-                # Get paginated results
+                # Get paginated results for the specific probe
                 cur.execute('''
                     SELECT 
                         m.timestamp,
@@ -184,9 +189,10 @@ class Database:
                         m.discriminator
                     FROM measurements m
                     JOIN probes p ON m.probe_id = p.id
+                    WHERE p.probe_address = %s
                     ORDER BY m.timestamp DESC
                     LIMIT %s OFFSET %s
-                ''', (per_page, offset))
+                ''', (probe_id, per_page, offset))
                 records = cur.fetchall()
 
                 return list(records), total_records

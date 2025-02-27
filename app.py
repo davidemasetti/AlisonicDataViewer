@@ -8,7 +8,8 @@ from src.ui_components import (
     render_probe_info,
     render_measurements,
     render_measurement_history,
-    render_error_messages
+    render_error_messages,
+    render_probe_summary
 )
 
 # XML file paths
@@ -43,6 +44,8 @@ def main():
         st.session_state.selected_probe_index = 0
     if 'selected_xml_index' not in st.session_state:
         st.session_state.selected_xml_index = 0
+    if 'show_probe_details' not in st.session_state:
+        st.session_state.show_probe_details = False
 
     render_header()
 
@@ -109,16 +112,29 @@ def main():
     except Exception as e:
         st.error(f"Failed to save measurement: {str(e)}")
 
-    # Render dashboard components
-    render_probe_info(probe_data)
-    render_measurements(probe_data)
+    # Show either summary or detailed view
+    if not st.session_state.show_probe_details:
+        # Render summary dashboard
+        render_probe_summary(probe_data_list)
+        if st.button(f"View Details for Probe {selected_probe}"):
+            st.session_state.show_probe_details = True
+            st.rerun()
+    else:
+        # Render detailed probe view
+        if st.button("Back to Summary"):
+            st.session_state.show_probe_details = False
+            st.rerun()
 
-    # Fetch and display measurement history
-    records, total_records = db.get_measurement_history(
-        page=st.session_state.history_page,
-        per_page=200
-    )
-    render_measurement_history(records, total_records, st.session_state.history_page)
+        render_probe_info(probe_data)
+        render_measurements(probe_data)
+
+        # Fetch and display measurement history for selected probe
+        records, total_records = db.get_measurement_history(
+            probe_id=selected_probe,
+            page=st.session_state.history_page,
+            per_page=200
+        )
+        render_measurement_history(records, total_records, st.session_state.history_page)
 
     # Display last update time
     st.sidebar.markdown("### Status")
