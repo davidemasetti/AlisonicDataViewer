@@ -10,8 +10,18 @@ class XMLParser:
             tree = ET.parse(file_path)
             root = tree.getroot()
 
-            # Get customer ID
-            customer_id = root.find('.//CustomerID').text if root.find('.//CustomerID') is not None else ''
+            # Get site information
+            site = root.find('.//Site')
+            if site is None:
+                print("No Site element found in XML")
+                return None
+
+            site_info = {
+                'server_id': site.find('ServerID').text if site.find('ServerID') is not None else '',
+                'distributor_id': site.find('DistributorID').text if site.find('DistributorID') is not None else '',
+                'customer_id': site.find('CustomerID').text if site.find('CustomerID') is not None else '',
+                'site_id': site.find('SiteID').text if site.find('SiteID') is not None else ''
+            }
 
             # Find all probes
             probes = root.findall('.//Probe')
@@ -27,12 +37,23 @@ class XMLParser:
                 if temperatures is not None:
                     temp_values = [float(temp.text) for temp in temperatures.findall('Temperature') if temp.text]
 
+                # Format datetime (replace '.' with ':' for database compatibility)
+                datetime_str = probe.find('DateTime').text if probe.find('DateTime') is not None else ''
+                if datetime_str:
+                    datetime_str = datetime_str.replace('.', ':')
+
                 # Create probe data dictionary
                 probe_data = {
-                    'customer_id': customer_id,
+                    'server_id': site_info['server_id'],
+                    'distributor_id': site_info['distributor_id'],
+                    'customer_id': site_info['customer_id'],
+                    'site_id': site_info['site_id'],
                     'address': probe.find('Address').text if probe.find('Address') is not None else '',
-                    'status': probe.find('Status').text if probe.find('Status') is not None else '',
-                    'datetime': probe.find('DateTime').text if probe.find('DateTime') is not None else '',
+                    'probe_status': probe.find('ProbeStatus').text if probe.find('ProbeStatus') is not None else '',
+                    'alarm_status': probe.find('AlarmStatus').text if probe.find('AlarmStatus') is not None else '',
+                    'tank_status': probe.find('TankStatus').text if probe.find('TankStatus') is not None else '',
+                    'datetime': datetime_str,
+                    'ullage': probe.find('Ullage').text if probe.find('Ullage') is not None else '',
                     'product': probe.find('Product').text if probe.find('Product') is not None else '',
                     'water': probe.find('Water').text if probe.find('Water') is not None else '',
                     'density': probe.find('Density').text if probe.find('Density') is not None else '',

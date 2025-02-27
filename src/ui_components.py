@@ -7,33 +7,48 @@ def render_header():
     st.title("Cloud Probe Solution Dashboard")
     st.markdown("---")
 
+def get_alarm_status_info(status: str) -> tuple[str, str]:
+    try:
+        status_int = int(status)
+        if status_int == 0:
+            return "OK", "green"
+        elif status_int == 1:
+            return "Acknowledged", "yellow"
+        else:
+            return "Alarm", "red"
+    except ValueError:
+        return "Unknown", "gray"
+
 def render_probe_info(probe_data):
     col1, col2, col3 = st.columns(3)
 
     with col1:
         st.metric("Probe Address", probe_data['address'])
-        status_value = probe_data['status']
-        status_color = 'normal' if status_value == '0' else 'off'
-        st.metric("Status", status_value, delta=None, delta_color=status_color)
+        alarm_text, alarm_color = get_alarm_status_info(probe_data['alarm_status'])
+        st.metric("Alarm Status", alarm_text, delta=None, delta_color=alarm_color)
+        st.metric("Probe Status", probe_data['probe_status'])
+        st.metric("Tank Status", probe_data['tank_status'])
 
     with col2:
         st.metric("Customer ID", probe_data['customer_id'])
+        st.metric("Site ID", probe_data['site_id'])
         discriminator_map = {'D': 'Diesel', 'P': 'Benzina', 'N': 'Non definito'}
         st.metric("Discriminator", discriminator_map.get(probe_data['discriminator'], 'Unknown'))
 
     with col3:
         st.metric("Last Update", probe_data['datetime'])
+        st.metric("Ullage", f"{float(probe_data['ullage']):.2f} mm")
 
 def render_measurements(probe_data):
     st.subheader("Measurements")
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("Product", f"{float(probe_data['product']):.2f}")
+        st.metric("Product", f"{float(probe_data['product']):.2f} mm")
     with col2:
-        st.metric("Water", f"{float(probe_data['water']):.2f}")
+        st.metric("Water", f"{float(probe_data['water']):.2f} mm")
     with col3:
-        st.metric("Density", f"{float(probe_data['density']):.2f}")
+        st.metric("Density", f"{float(probe_data['density']):.2f} kg/m³")
 
 def render_temperature_graph(temperatures):
     st.subheader("Temperature Distribution")
@@ -51,7 +66,12 @@ def render_temperature_graph(temperatures):
         yaxis_title="Temperature (°C)",
         height=400,
         margin=dict(l=20, r=20, t=20, b=20),
-        hovermode='x'
+        hovermode='x',
+        yaxis=dict(
+            range=[-30, 80],  # Set y-axis range to match temperature constraints
+            tickmode='linear',
+            dtick=10
+        )
     )
 
     st.plotly_chart(fig, use_container_width=True)

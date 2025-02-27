@@ -6,13 +6,37 @@ class DataValidator:
     def validate_probe_data(data: Dict) -> Tuple[bool, List[str]]:
         errors = []
 
-        # Status validation (max 2 digits)
+        # ProbeStatus validation (max 2 digits)
         try:
-            status = int(data['status'])
+            status = int(data['probe_status'])
             if status < 0 or len(str(status)) > 2:
-                errors.append("Status must be a positive number with max 2 digits")
+                errors.append("Probe status must be a positive number with max 2 digits")
         except ValueError:
-            errors.append("Status must be a valid integer")
+            errors.append("Probe status must be a valid integer")
+
+        # AlarmStatus validation (0, 1, or 2)
+        try:
+            alarm_status = int(data['alarm_status'])
+            if alarm_status not in [0, 1, 2]:
+                errors.append("Alarm status must be 0 (ok), 1 (ack), or 2 (alarm)")
+        except ValueError:
+            errors.append("Alarm status must be a valid integer")
+
+        # TankStatus validation (max 2 digits)
+        try:
+            tank_status = int(data['tank_status'])
+            if tank_status < 0 or len(str(tank_status)) > 2:
+                errors.append("Tank status must be a positive number with max 2 digits")
+        except ValueError:
+            errors.append("Tank status must be a valid integer")
+
+        # Ullage validation (5 integers + 2 decimals)
+        try:
+            ullage = float(data['ullage'])
+            if len(str(int(ullage))) > 5 or len(str(ullage).split('.')[1]) > 2:
+                errors.append("Ullage must have max 5 integers and 2 decimals")
+        except (ValueError, IndexError):
+            errors.append("Invalid ullage value")
 
         # Product validation (5 integers + 2 decimals)
         try:
@@ -48,11 +72,13 @@ class DataValidator:
         except ValueError:
             errors.append("Invalid datetime format. Expected format: YYYY-MM-DD HH:MM:SS")
 
-        # Temperature validation (3 integers + 1 decimal)
+        # Temperature validation (3 integers + 1 decimal, range -30° to 80°)
         for temp in data['temperatures']:
             try:
                 if len(str(int(temp))) > 3 or len(str(temp).split('.')[1]) > 1:
                     errors.append("Temperature must have max 3 integers and 1 decimal")
+                if temp < -30 or temp > 80:
+                    errors.append("Temperature must be between -30° and 80°")
             except (ValueError, IndexError):
                 errors.append("Invalid temperature value")
 
