@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import json
 from datetime import datetime
 
 def render_header():
@@ -26,15 +25,12 @@ def render_probe_summary(probe_data_list):
     summary_data = []
     for probe in probe_data_list:
         avg_temp = sum(probe['temperatures']) / len(probe['temperatures']) if probe['temperatures'] else 0
-        
-        # Use get() method with default value for optional fields
-        # This prevents KeyError if a field is missing
         summary_data.append({
             'Probe ID': probe['address'],
-            'Ullage (mm)': f"{float(probe.get('ullage', 0)):.2f}",
+            'Ullage (mm)': f"{float(probe['ullage']):.2f}",
             'Product Volume (mm)': f"{float(probe['product']):.2f}",
             'Temperature (°C)': f"{avg_temp:.1f}",
-            'Status': get_alarm_status_info(probe.get('alarm_status', '0'))[0]
+            'Status': get_alarm_status_info(probe['alarm_status'])[0]
         })
 
     # Convert to DataFrame for better display
@@ -49,23 +45,20 @@ def render_probe_info(probe_data):
 
     with col1:
         st.metric("Probe Address", probe_data['address'])
-        alarm_text, alarm_color = get_alarm_status_info(probe_data.get('alarm_status', '0'))
-        st.metric("Alarm Status", alarm_text, delta=None, delta_color=alarm_color)
-        st.metric("Probe Status", probe_data.get('probe_status', '0'))
-        st.metric("Tank Status", probe_data.get('tank_status', '0'))
+        alarm_text, alarm_color = get_alarm_status_info(probe_data['alarm_status'])
+        st.metric("Alarm Status", alarm_text, delta=" ", delta_color=alarm_color)
+        st.metric("Probe Status", probe_data['probe_status'])
+        st.metric("Tank Status", probe_data['tank_status'])
 
     with col2:
-        st.metric("Customer ID", probe_data.get('customer_id', 'N/A'))
-        st.metric("Site ID", probe_data.get('site_id', 'N/A'))
+        st.metric("Customer ID", probe_data['customer_id'])
+        st.metric("Site ID", probe_data['site_id'])
         discriminator_map = {'D': 'Diesel', 'P': 'Benzina', 'N': 'Non definito'}
         st.metric("Discriminator", discriminator_map.get(probe_data['discriminator'], 'Unknown'))
 
     with col3:
         st.metric("Last Update", probe_data['datetime'])
-        
-        # Get ullage value, default to 0 if not present
-        ullage_value = probe_data.get('ullage', '0')
-        st.metric("Ullage", f"{float(ullage_value):.2f} mm")
+        st.metric("Ullage", f"{float(probe_data['ullage']):.2f} mm")
 
 def render_measurements(probe_data):
     st.subheader("Measurements")
@@ -87,32 +80,12 @@ def render_measurement_history(records, total_records, page: int = 1, per_page: 
 
     # Convert records to pandas DataFrame for better display
     df = pd.DataFrame(records)
-    
-    # Check if 'temperatures' column exists and unpack it
-    if 'temperatures' in df.columns:
-        # First, ensure temperatures is parsed from JSON string if needed
-        df['temperatures'] = df['temperatures'].apply(
-            lambda x: json.loads(x) if isinstance(x, str) else x
-        )
-        
-        # Try to extract temperature value (assuming it's the first in the list)
-        def extract_temp(temps):
-            if isinstance(temps, list) and temps:
-                if isinstance(temps[0], dict) and 'value' in temps[0]:
-                    return temps[0]['value']
-                return temps[0]
-            return None
-            
-        df['temperature'] = df['temperatures'].apply(extract_temp)
-        
-        # Drop the original temperatures column
-        df = df.drop('temperatures', axis=1)
 
     # Format timestamp
     df['timestamp'] = pd.to_datetime(df['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
 
-    # Determine which columns are available and should be displayed
-    available_columns = {
+    # Reorder and rename columns
+    columns = {
         'timestamp': 'Timestamp',
         'probe_address': 'Probe Address',
         'status': 'Status',
@@ -121,13 +94,7 @@ def render_measurement_history(records, total_records, page: int = 1, per_page: 
         'density': 'Density',
         'discriminator': 'Discriminator'
     }
-    
-    if 'temperature' in df.columns:
-        available_columns['temperature'] = 'Temperature'
-        
-    # Use only the columns that exist in the DataFrame
-    columns_to_use = [col for col in available_columns.keys() if col in df.columns]
-    df = df[columns_to_use].rename(columns={k: available_columns[k] for k in columns_to_use})
+    df = df[columns.keys()].rename(columns=columns)
 
     # Display table with pagination info
     st.dataframe(df, use_container_width=True)
