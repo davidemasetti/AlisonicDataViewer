@@ -83,10 +83,25 @@ def main():
     # Setup the hierarchical navigation in sidebar
     st.sidebar.markdown("### Navigation")
     
-    # For development/demo: Add XML file selector in sidebar
+    # Import XML data section
     st.sidebar.markdown("#### Import XML Data")
+    
+    # Add links to batch import tools
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        if st.button("Batch Import", use_container_width=True):
+            st.switch_page("batch_import_xml.py")
+    with col2:
+        if st.button("High Volume Import", use_container_width=True):
+            st.switch_page("high_volume_import.py")
+            
+    # Add link to database optimization tool
+    if st.sidebar.button("Optimize Database", use_container_width=True):
+        st.switch_page("optimize_database.py")
+    
+    # For development/demo: Add XML file selector in sidebar
     selected_xml = st.sidebar.selectbox(
-        "Select XML Data Source",
+        "Quick Import Single File",
         XML_FILES,
         index=st.session_state.xml_file_index,
         format_func=lambda x: f"Site {os.path.basename(x).split('.')[0]}"

@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Settings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+   <General>
+      <FileVersion>1</FileVersion>
+   </General>
+   <Site>
+      <ServerID>1</ServerID>
+      <DistributorID>11</DistributorID>
+      <CustomerID>22</CustomerID>
+      <SiteID>12</SiteID>
+   </Site>
+   <Probes>
+      <Probe>
+         <Address>012345</Address>
+         <ProbeStatus>0</ProbeStatus>
+         <AlarmStatus>0</AlarmStatus>
+         <TankStatus>0</TankStatus>
+         <DateTime>2025-03-06 07.14.19</DateTime>
+         <Ullage>13647.12</Ullage>
+         <Product>1120.00</Product>
+         <Water>0</Water>
+         <Density>1234.56</Density>
+         <Phs></Phs>
+         <Discriminator></Discriminator>
+		 <Temperatures>
+			<Temperature>14.2</Temperature>
+			<Temperature>13.8</Temperature>
+			<Temperature>14.4</Temperature>
+			<Temperature>13.9</Temperature>
+			<Temperature>13.5</Temperature>
+		 </Temperatures>
+      </Probe>
+   </Probes>
+</Settings>
+
