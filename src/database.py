@@ -82,10 +82,19 @@ class Database:
                         alarm_status INTEGER NOT NULL DEFAULT 0,
                         tank_status INTEGER NOT NULL DEFAULT 0,
                         ullage DECIMAL(7,2) NOT NULL DEFAULT 0.0,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        UNIQUE(probe_id, timestamp)
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 ''')
+                
+                # Add unique constraint in a separate command for better error handling
+                try:
+                    cur.execute('''
+                        ALTER TABLE measurements 
+                        ADD CONSTRAINT unique_probe_timestamp UNIQUE (probe_id, timestamp)
+                    ''')
+                except Exception:
+                    # Constraint might already exist, which is fine
+                    pass
 
                 # Create indexes for better query performance
                 cur.execute('CREATE INDEX IF NOT EXISTS idx_measurements_timestamp ON measurements(timestamp DESC)')
@@ -212,13 +221,12 @@ class Database:
                     if discriminator == '':
                         discriminator = 'N'
                     
-                    # Insert with ON CONFLICT DO NOTHING explicitly
+                    # Insert without ON CONFLICT clause
                     cur.execute('''
                         INSERT INTO measurements 
                         (probe_id, timestamp, status, product, water, density, discriminator, temperatures,
                          probe_status, alarm_status, tank_status, ullage)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (probe_id, timestamp) DO NOTHING
                     ''', (
                         probe_id,
                         measurement_timestamp,
