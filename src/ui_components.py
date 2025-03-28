@@ -18,7 +18,7 @@ def get_alarm_status_info(status: str) -> tuple[str, str]:
     except ValueError:
         return "Unknown", "off"  # Changed from "gray" to "off"
 
-def render_probe_summary(probe_data_list):
+def render_probe_summary(probe_data_list, select_callback=None):
     st.subheader("Site Overview")
 
     # Create summary data
@@ -36,7 +36,33 @@ def render_probe_summary(probe_data_list):
     # Convert to DataFrame for better display
     if summary_data:
         df = pd.DataFrame(summary_data)
-        st.dataframe(df, use_container_width=True)
+        
+        # Use an interactive dataframe with row selection if callback is provided
+        if select_callback:
+            st.dataframe(
+                df,
+                use_container_width=True,
+                column_config={
+                    "Probe ID": st.column_config.TextColumn(
+                        "Probe ID",
+                        help="Unique identifier for the probe",
+                        width="medium",
+                    ),
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        width="small",
+                    ),
+                }
+            )
+            
+            # Add action buttons for each probe
+            cols = st.columns(len(summary_data))
+            for i, (col, probe) in enumerate(zip(cols, probe_data_list)):
+                with col:
+                    if st.button(f"View Probe {probe['address']}", key=f"probe_button_{i}"):
+                        select_callback(probe['address'])
+        else:
+            st.dataframe(df, use_container_width=True)
     else:
         st.info("No probe data available for this site.")
 
@@ -88,13 +114,22 @@ def render_measurement_history(records, total_records, page: int = 1, per_page: 
     columns = {
         'timestamp': 'Timestamp',
         'probe_address': 'Probe Address',
-        'status': 'Status',
-        'product': 'Product',
-        'water': 'Water',
-        'density': 'Density',
+        'status': 'Probe Status',
+        'probe_status': 'Probe Status',
+        'alarm_status': 'Alarm Status',
+        'tank_status': 'Tank Status',
+        'product': 'Product (mm)',
+        'water': 'Water (mm)',
+        'density': 'Density (kg/m³)',
+        'ullage': 'Ullage (mm)',
         'discriminator': 'Discriminator'
     }
-    df = df[columns.keys()].rename(columns=columns)
+    
+    # Filter out columns that don't exist in the dataframe
+    available_columns = {k: v for k, v in columns.items() if k in df.columns}
+    
+    # Apply column renaming
+    df = df[available_columns.keys()].rename(columns=available_columns)
 
     # Display table with pagination info
     st.dataframe(df, use_container_width=True)
