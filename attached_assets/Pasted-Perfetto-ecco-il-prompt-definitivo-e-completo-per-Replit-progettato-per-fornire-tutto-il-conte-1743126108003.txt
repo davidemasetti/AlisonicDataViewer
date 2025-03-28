@@ -1,0 +1,93 @@
+Perfetto, ecco il **prompt definitivo e completo per Replit**, progettato per fornire tutto il contesto necessario allo sviluppo, con allegati i 20 file XML come esempio realistico:
+
+---
+
+### ✅ Prompt definitivo per Replit – Cloud Probe Solution – XML Batch Import
+
+**Contesto progetto:**  
+Stiamo sviluppando per Alisonic una piattaforma per il monitoraggio remoto dei serbatoi tramite sonde connesse. Ogni **sonda invia ogni 10 minuti un file XML**, contenente i dati rilevati in quel momento. Ogni XML rappresenta **una singola misurazione** di una specifica sonda, appartenente a un sito, legato a un cliente.
+
+---
+
+### 🎯 Obiettivo di questo task
+
+Simulare l’arrivo continuo e cronologico dei file XML (esattamente come avverrà in produzione) e:
+1. **Importare i file nel database** in modo coerente con la logica già implementata.
+2. **Popolare correttamente le entità nel database**: cliente, sito, sonda, misurazione.
+3. **Evitare duplicazioni**: se una misurazione (identificata da `probe_address + timestamp`) è già presente, NON deve essere reinserita.
+4. **Verificare che la dashboard (già attiva) mostri correttamente lo storico** della sonda nella tabella “Measurement History”.
+
+---
+
+### 🧩 Struttura tecnica del sistema (già presente)
+
+- **Backend:** Python (su Replit)
+- **Frontend:** Streamlit
+- **Database:** PostgreSQL (unico, multi-tenant)
+- Ogni misura contiene: `customer_id`, `site_id`, `address`, `timestamp`, `product`, `water`, `ullage`, `density`, `temperatures`, `alarm_status`, ecc.
+
+Moduli già attivi nel progetto:
+- `XMLParser` → parsing file XML
+- `DataValidator` → validazione logica e tipologica dei dati
+- `Database.save_measurement(data)` → salva misurazione
+- `Database.get_measurement_history(probe_id)` → usato nella dashboard
+- Dashboard e switch tra sonde funzionano correttamente
+
+---
+
+### 📂 Dove si trovano i file XML per il test
+
+Vi forniamo **20 file XML di esempio**, ciascuno con:
+- Sonda `012345`
+- CustomerID `22`
+- SiteID `12`
+- Timestamp univoco
+Questi file si trovano nella cartella:
+```
+/mnt/data/xml_import/
+```
+
+---
+
+### 🛠 Cosa deve fare lo script
+
+1. Leggere tutti i file `.xml` presenti nella cartella `/mnt/data/xml_import/`
+2. Per ogni file:
+   - Eseguire il parsing XML (`XMLParser.parse_xml_file(path)`)
+   - Validare i dati (`DataValidator.validate_probe_data(data)`)
+   - Verificare se esiste già una misura con stesso `probe_address` + `timestamp`
+     - Se esiste: saltare il file
+     - Se non esiste: salvare (`Database.save_measurement(data)`)
+3. Stampare un riepilogo finale:
+   ```
+   Importazione completata.
+   Nuovi record salvati: 18
+   Record già presenti: 2
+   ```
+
+---
+
+### 🧠 Note importanti per l'architettura
+
+Questo test serve anche a **simulare l’uso reale del sistema**, che in produzione riceverà:
+- **XML continui da più sonde** contemporaneamente
+- Da **più clienti e più siti diversi**
+- 24/7, ogni 10 minuti
+
+Quindi è essenziale che il comportamento del database e della logica sia già **scalabile e segmentato correttamente per:**
+- Cliente (`customer_id`)
+- Sito (`site_id`)
+- Sonda (`address`)
+- Timestamp (`datetime`)
+
+---
+
+📦 Allegati:
+- `/mnt/data/xml_import/` contenente 20 file XML campione
+- Eventuale script `batch_import_xml.py` da integrare nella logica esistente
+
+---
+
+✅ Obiettivo finale: dimostrare che il sistema può ricevere file XML cronologici e popolarsi correttamente, in modo affidabile, senza duplicazioni e con corretta visualizzazione nella dashboard.
+
+Grazie! 🙌
