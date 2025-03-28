@@ -110,10 +110,29 @@ def main():
         )
         st.session_state.selected_xml_index = XML_FILES.index(selected_xml)
         
-        # Import timestamp files in the background without UI controls
-        if TIMESTAMP_FILES and 'timestamp_files_imported' not in st.session_state:
-            with st.spinner("Importing timestamp data..."):
-                for file_path in TIMESTAMP_FILES:
+        # Import timestamp files and offer an import button
+        if 'timestamp_files_imported' not in st.session_state:
+            st.session_state.timestamp_files_imported = False
+            
+        if not st.session_state.timestamp_files_imported:
+            import_btn = st.sidebar.button("Import Historical Data", type="primary", help="Import historical data from XML files")
+            
+            if import_btn or (TIMESTAMP_FILES and 'auto_import' not in st.session_state):
+                st.session_state.auto_import = True
+                with st.sidebar:
+                    progress_bar = st.progress(0.0)
+                    status_text = st.empty()
+                
+                total_files = len(TIMESTAMP_FILES)
+                imported_count = 0
+                skipped_count = 0
+                success_count = 0
+                
+                for i, file_path in enumerate(TIMESTAMP_FILES):
+                    progress = (i / total_files)
+                    progress_bar.progress(progress)
+                    status_text.text(f"Importing file {i+1}/{total_files}: {os.path.basename(file_path)}")
+                    
                     probe_data_list = XMLParser.parse_xml_file(file_path)
                     if probe_data_list:
                         for probe_data in probe_data_list:
@@ -127,15 +146,21 @@ def main():
                                 
                             if not probe_data.get('site_id') or probe_data.get('site_id') == '':
                                 probe_data['site_id'] = '999'
-                                
+                            
+                            imported_count += 1
                             is_valid, _ = DataValidator.validate_probe_data(probe_data)
                             if is_valid:
                                 try:
                                     db.save_measurement(probe_data)
+                                    success_count += 1
                                 except Exception as e:
-                                    # Log import errors but continue
-                                    pass
+                                    skipped_count += 1
+                
+                progress_bar.progress(1.0)
+                status_text.text(f"Done! Imported {success_count}/{imported_count} measurements, skipped {skipped_count}")
+                time.sleep(1)
                 st.session_state.timestamp_files_imported = True
+                st.rerun()
     
     # Parse XML from selected file
     probe_data_list = XMLParser.parse_xml_file(selected_xml)
@@ -208,12 +233,22 @@ def main():
         # Fetch and display measurement history for selected probe
         try:
             if db is not None:
+                # Add debug information
+                st.info(f"Getting measurement history for probe: {selected_probe}")
+                
                 records, total_records = db.get_measurement_history(
                     probe_id=selected_probe,
                     page=st.session_state.history_page,
                     per_page=10
                 )
-                render_measurement_history(records, total_records, st.session_state.history_page)
+                
+                # Debug information about records
+                st.info(f"Found {total_records} total records")
+                
+                if total_records > 0:
+                    render_measurement_history(records, total_records, st.session_state.history_page)
+                else:
+                    st.warning("No measurement history found for this probe. Try importing more data files or check the probe address.")
             else:
                 st.warning("Database connection is not available. Unable to show measurement history.")
         except Exception as e:
