@@ -90,14 +90,14 @@ def main():
     col1, col2 = st.sidebar.columns(2)
     with col1:
         if st.button("Batch Import", use_container_width=True):
-            st.switch_page("batch_import_xml.py")
+            st.switch_page("pages/01_Batch_Import.py")
     with col2:
         if st.button("High Volume Import", use_container_width=True):
-            st.switch_page("high_volume_import.py")
+            st.switch_page("pages/02_High_Volume_Import.py")
             
     # Add link to database optimization tool
     if st.sidebar.button("Optimize Database", use_container_width=True):
-        st.switch_page("optimize_database.py")
+        st.switch_page("pages/03_Optimize_Database.py")
     
     # For development/demo: Add XML file selector in sidebar
     selected_xml = st.sidebar.selectbox(

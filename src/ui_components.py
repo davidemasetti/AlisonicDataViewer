@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import json
 from datetime import datetime
 
 def render_header():
@@ -86,12 +87,32 @@ def render_measurement_history(records, total_records, page: int = 1, per_page: 
 
     # Convert records to pandas DataFrame for better display
     df = pd.DataFrame(records)
+    
+    # Check if 'temperatures' column exists and unpack it
+    if 'temperatures' in df.columns:
+        # First, ensure temperatures is parsed from JSON string if needed
+        df['temperatures'] = df['temperatures'].apply(
+            lambda x: json.loads(x) if isinstance(x, str) else x
+        )
+        
+        # Try to extract temperature value (assuming it's the first in the list)
+        def extract_temp(temps):
+            if isinstance(temps, list) and temps:
+                if isinstance(temps[0], dict) and 'value' in temps[0]:
+                    return temps[0]['value']
+                return temps[0]
+            return None
+            
+        df['temperature'] = df['temperatures'].apply(extract_temp)
+        
+        # Drop the original temperatures column
+        df = df.drop('temperatures', axis=1)
 
     # Format timestamp
     df['timestamp'] = pd.to_datetime(df['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
 
-    # Reorder and rename columns
-    columns = {
+    # Determine which columns are available and should be displayed
+    available_columns = {
         'timestamp': 'Timestamp',
         'probe_address': 'Probe Address',
         'status': 'Status',
@@ -100,7 +121,13 @@ def render_measurement_history(records, total_records, page: int = 1, per_page: 
         'density': 'Density',
         'discriminator': 'Discriminator'
     }
-    df = df[columns.keys()].rename(columns=columns)
+    
+    if 'temperature' in df.columns:
+        available_columns['temperature'] = 'Temperature'
+        
+    # Use only the columns that exist in the DataFrame
+    columns_to_use = [col for col in available_columns.keys() if col in df.columns]
+    df = df[columns_to_use].rename(columns={k: available_columns[k] for k in columns_to_use})
 
     # Display table with pagination info
     st.dataframe(df, use_container_width=True)

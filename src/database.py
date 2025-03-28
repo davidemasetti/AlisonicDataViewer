@@ -3,6 +3,7 @@ from datetime import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import json
+from decimal import Decimal
 from typing import List, Dict, Optional, Tuple, Any
 import streamlit as st
 
@@ -358,8 +359,11 @@ class Database:
                 ''', (probe_id,))
                 result = cur.fetchone()
                 total_records = result['count'] if result else 0
+                
+                # Log the total count for debugging
+                print(f"Total records for probe {probe_id}: {total_records}")
 
-                # Get paginated results for the specific probe
+                # Get paginated results for the specific probe with the fields that exist in the table
                 cur.execute('''
                     SELECT 
                         m.timestamp,
@@ -368,7 +372,8 @@ class Database:
                         m.product,
                         m.water,
                         m.density,
-                        m.discriminator
+                        m.discriminator,
+                        m.temperatures
                     FROM measurements m
                     JOIN probes p ON m.probe_id = p.id
                     WHERE p.probe_address = %s
@@ -376,6 +381,12 @@ class Database:
                     LIMIT %s OFFSET %s
                 ''', (probe_id, per_page, offset))
                 records = cur.fetchall()
+                
+                # Convert decimal values to floats for better JSON serialization
+                for record in records:
+                    for key, value in record.items():
+                        if isinstance(value, Decimal):
+                            record[key] = float(value)
 
                 return list(records), total_records
         except Exception as e:

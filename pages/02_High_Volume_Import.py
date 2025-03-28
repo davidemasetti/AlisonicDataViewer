@@ -78,7 +78,16 @@ def main():
     # UI for selecting directory
     st.header("1. Select XML Files Directory")
     
-    xml_dir = st.text_input("XML Directory Path", value="attached_assets/extracted_files", 
+    # Create a button to directly import the probe 012345 files
+    if st.button("Import all probe 012345 XML files"):
+        xml_files = glob.glob("attached_assets/006*.xml")
+        if xml_files:
+            st.success(f"Found {len(xml_files)} XML files for probe 012345")
+            xml_dir = "attached_assets"
+        else:
+            st.warning("No probe 012345 XML files found")
+    
+    xml_dir = st.text_input("XML Directory Path", value="attached_assets", 
                            help="Enter the directory path containing XML files")
     
     # Find all XML files in the directory
