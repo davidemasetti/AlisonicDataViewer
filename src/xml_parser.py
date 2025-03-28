@@ -45,13 +45,35 @@ class XMLParser:
                     datetime_str = datetime_str.replace('.', ':')
 
                 # Create probe data dictionary
+                # Get Status from old format or ProbeStatus from new format
+                status_value = '0'
+                status_node = probe.find('Status')
+                probe_status_node = probe.find('ProbeStatus')
+                
+                if probe_status_node is not None and probe_status_node.text:
+                    status_value = probe_status_node.text
+                elif status_node is not None and status_node.text:
+                    status_value = status_node.text
+                
+                # Get site info - support missing values
+                customer_id = site_info.get('customer_id', '1')
+                site_id = site_info.get('site_id', '1')
+                
+                # For files with missing SiteID, use a default consistent value
+                if not site_id or site_id.strip() == '':
+                    site_id = '999'  # Default site ID for files without site information
+                    
+                if not customer_id or customer_id.strip() == '':
+                    customer_id = '999'  # Default customer ID for files without customer information
+                
                 probe_data = {
-                    'server_id': site_info['server_id'],
-                    'distributor_id': site_info['distributor_id'],
-                    'customer_id': site_info['customer_id'],
-                    'site_id': site_info['site_id'],
+                    'server_id': site_info.get('server_id', ''),
+                    'distributor_id': site_info.get('distributor_id', ''),
+                    'customer_id': customer_id,
+                    'site_id': site_id,
                     'address': probe.find('Address').text if probe.find('Address') is not None else '',
-                    'probe_status': probe.find('ProbeStatus').text if probe.find('ProbeStatus') is not None else '0',
+                    'status': status_value,
+                    'probe_status': probe_status_node.text if probe_status_node is not None else status_value,
                     'alarm_status': probe.find('AlarmStatus').text if probe.find('AlarmStatus') is not None else '0',
                     'tank_status': probe.find('TankStatus').text if probe.find('TankStatus') is not None else '0',
                     'datetime': datetime_str,

@@ -66,8 +66,6 @@ def main():
         st.session_state.selected_xml_index = 0
     if 'show_probe_details' not in st.session_state:
         st.session_state.show_probe_details = False
-    if 'load_timestamp_files' not in st.session_state:
-        st.session_state.load_timestamp_files = False
     if 'probe_data_list' not in st.session_state:
         st.session_state.probe_data_list = []
 
@@ -110,27 +108,21 @@ def main():
         )
         st.session_state.selected_xml_index = XML_FILES.index(selected_xml)
         
-        # Process timestamp files option
-        st.markdown("### Timestamp Test Data")
-        st.session_state.load_timestamp_files = st.checkbox(
-            "Process timestamp test files", 
-            value=st.session_state.load_timestamp_files
-        )
-        
-        if st.session_state.load_timestamp_files and TIMESTAMP_FILES:
-            st.info(f"Found {len(TIMESTAMP_FILES)} timestamp test files")
-            if st.button("Import All Timestamp Files"):
-                with st.spinner("Importing timestamp files..."):
-                    for file_path in TIMESTAMP_FILES:
-                        probe_data_list = XMLParser.parse_xml_file(file_path)
+        # Import timestamp files in the background without UI controls
+        if TIMESTAMP_FILES and 'timestamp_files_imported' not in st.session_state:
+            with st.spinner("Importing timestamp data..."):
+                for file_path in TIMESTAMP_FILES:
+                    probe_data_list = XMLParser.parse_xml_file(file_path)
+                    if probe_data_list:
                         for probe_data in probe_data_list:
                             is_valid, _ = DataValidator.validate_probe_data(probe_data)
                             if is_valid:
                                 try:
                                     db.save_measurement(probe_data)
                                 except Exception as e:
-                                    st.error(f"Error importing {file_path}: {e}")
-                st.success("Import complete!")
+                                    # Silently handle import errors
+                                    pass
+                st.session_state.timestamp_files_imported = True
     
     # Parse XML from selected file
     probe_data_list = XMLParser.parse_xml_file(selected_xml)

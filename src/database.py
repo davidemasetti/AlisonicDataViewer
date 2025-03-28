@@ -191,25 +191,47 @@ class Database:
                     # Skip if the measurement already exists
                     pass
                 else:
-                    # Insert new measurement
+                    # Default values for missing fields
+                    probe_status = probe_data.get('probe_status', probe_data.get('status', 0))
+                    if probe_status == '':
+                        probe_status = 0
+                        
+                    alarm_status = probe_data.get('alarm_status', 0)
+                    if alarm_status == '':
+                        alarm_status = 0
+                        
+                    tank_status = probe_data.get('tank_status', 0)
+                    if tank_status == '':
+                        tank_status = 0
+                        
+                    ullage = probe_data.get('ullage', 0.0)
+                    if ullage == '':
+                        ullage = 0.0
+                    
+                    discriminator = probe_data.get('discriminator', 'N')
+                    if discriminator == '':
+                        discriminator = 'N'
+                    
+                    # Insert with ON CONFLICT DO NOTHING explicitly
                     cur.execute('''
                         INSERT INTO measurements 
                         (probe_id, timestamp, status, product, water, density, discriminator, temperatures,
                          probe_status, alarm_status, tank_status, ullage)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (probe_id, timestamp) DO NOTHING
                     ''', (
                         probe_id,
                         measurement_timestamp,
-                        probe_data['probe_status'],
+                        str(probe_status),
                         float(probe_data['product']),
                         float(probe_data['water']),
                         float(probe_data['density']),
-                        probe_data['discriminator'],
+                        discriminator,
                         json.dumps(probe_data['temperatures']),
-                        int(probe_data['probe_status']),
-                        int(probe_data['alarm_status']),
-                        int(probe_data['tank_status']),
-                        float(probe_data['ullage'])
+                        int(probe_status),
+                        int(alarm_status),
+                        int(tank_status),
+                        float(ullage)
                     ))
                 self.conn.commit()
         except Exception as e:

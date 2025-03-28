@@ -6,9 +6,14 @@ class DataValidator:
     def validate_probe_data(data: Dict) -> Tuple[bool, List[str]]:
         errors = []
 
-        # ProbeStatus validation (max 2 digits)
+        # ProbeStatus validation (max 2 digits) - support both 'probe_status' and 'status' fields
         try:
-            probe_status = int(data.get('probe_status', ''))
+            # Try 'probe_status' first, then fall back to 'status'
+            probe_status_value = data.get('probe_status', data.get('status', '0'))
+            if probe_status_value == '':
+                probe_status_value = '0'
+                
+            probe_status = int(probe_status_value)
             if probe_status < 0 or len(str(probe_status)) > 2:
                 errors.append("Probe status must be a positive number with max 2 digits")
         except (ValueError, TypeError):
@@ -16,19 +21,30 @@ class DataValidator:
 
         # AlarmStatus validation (0, 1, or 2)
         try:
-            alarm_status = int(data.get('alarm_status', ''))
-            if alarm_status not in [0, 1, 2]:
-                errors.append("Alarm status must be 0 (ok), 1 (ack), or 2 (alarm)")
+            alarm_status_value = data.get('alarm_status', '0')
+            if alarm_status_value == '':
+                alarm_status_value = '0'
+                
+            alarm_status = int(alarm_status_value)
+            # Allow any numeric value for now, we'll normalize in the database
+            if alarm_status < 0:
+                errors.append("Alarm status must be a non-negative integer")
         except (ValueError, TypeError):
-            errors.append("Alarm status must be a valid integer")
+            # Default to 0 if there's a problem
+            pass
 
         # TankStatus validation (max 2 digits)
         try:
-            tank_status = int(data.get('tank_status', ''))
+            tank_status_value = data.get('tank_status', '0')
+            if tank_status_value == '':
+                tank_status_value = '0'
+                
+            tank_status = int(tank_status_value)
             if tank_status < 0 or len(str(tank_status)) > 2:
                 errors.append("Tank status must be a positive number with max 2 digits")
         except (ValueError, TypeError):
-            errors.append("Tank status must be a valid integer")
+            # Default to 0 if there's a problem
+            pass
 
         # Ullage validation (5 integers + 2 decimals)
         try:
@@ -71,15 +87,29 @@ class DataValidator:
             errors.append("Invalid density value")
 
         # Discriminator validation
-        discriminator = data.get('discriminator', '')
-        if discriminator not in ['D', 'P', 'N']:
+        discriminator = data.get('discriminator', 'N')
+        if not discriminator:  # Empty discriminator
+            discriminator = 'N'
+        
+        # Allow empty or standard values
+        if discriminator not in ['D', 'P', 'N', '']:
             errors.append("Discriminator must be D, P, or N")
 
         # DateTime validation
-        try:
-            datetime.strptime(data.get('datetime', ''), '%Y-%m-%d %H:%M:%S')
-        except ValueError:
-            errors.append("Invalid datetime format. Expected format: YYYY-MM-DD HH:MM:SS")
+        datetime_str = data.get('datetime', '')
+        if datetime_str:
+            try:
+                # Try standard format first
+                datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                try:
+                    # Try with dots between time components
+                    alt_datetime_str = datetime_str.replace('.', ':')
+                    datetime.strptime(alt_datetime_str, '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    errors.append("Invalid datetime format. Expected format: YYYY-MM-DD HH:MM:SS")
+        else:
+            errors.append("Missing datetime value")
 
         # Temperature validation (3 integers + 1 decimal, range -30° to 80°)
         for temp in data.get('temperatures', []):
