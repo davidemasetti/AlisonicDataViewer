@@ -25,12 +25,15 @@ def render_probe_summary(probe_data_list):
     summary_data = []
     for probe in probe_data_list:
         avg_temp = sum(probe['temperatures']) / len(probe['temperatures']) if probe['temperatures'] else 0
+        
+        # Use get() method with default value for optional fields
+        # This prevents KeyError if a field is missing
         summary_data.append({
             'Probe ID': probe['address'],
-            'Ullage (mm)': f"{float(probe['ullage']):.2f}",
+            'Ullage (mm)': f"{float(probe.get('ullage', 0)):.2f}",
             'Product Volume (mm)': f"{float(probe['product']):.2f}",
             'Temperature (°C)': f"{avg_temp:.1f}",
-            'Status': get_alarm_status_info(probe['alarm_status'])[0]
+            'Status': get_alarm_status_info(probe.get('alarm_status', '0'))[0]
         })
 
     # Convert to DataFrame for better display
@@ -45,20 +48,23 @@ def render_probe_info(probe_data):
 
     with col1:
         st.metric("Probe Address", probe_data['address'])
-        alarm_text, alarm_color = get_alarm_status_info(probe_data['alarm_status'])
-        st.metric("Alarm Status", alarm_text, delta=" ", delta_color=alarm_color)
-        st.metric("Probe Status", probe_data['probe_status'])
-        st.metric("Tank Status", probe_data['tank_status'])
+        alarm_text, alarm_color = get_alarm_status_info(probe_data.get('alarm_status', '0'))
+        st.metric("Alarm Status", alarm_text, delta=None, delta_color=alarm_color)
+        st.metric("Probe Status", probe_data.get('probe_status', '0'))
+        st.metric("Tank Status", probe_data.get('tank_status', '0'))
 
     with col2:
-        st.metric("Customer ID", probe_data['customer_id'])
-        st.metric("Site ID", probe_data['site_id'])
+        st.metric("Customer ID", probe_data.get('customer_id', 'N/A'))
+        st.metric("Site ID", probe_data.get('site_id', 'N/A'))
         discriminator_map = {'D': 'Diesel', 'P': 'Benzina', 'N': 'Non definito'}
         st.metric("Discriminator", discriminator_map.get(probe_data['discriminator'], 'Unknown'))
 
     with col3:
         st.metric("Last Update", probe_data['datetime'])
-        st.metric("Ullage", f"{float(probe_data['ullage']):.2f} mm")
+        
+        # Get ullage value, default to 0 if not present
+        ullage_value = probe_data.get('ullage', '0')
+        st.metric("Ullage", f"{float(ullage_value):.2f} mm")
 
 def render_measurements(probe_data):
     st.subheader("Measurements")

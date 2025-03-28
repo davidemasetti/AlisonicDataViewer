@@ -3,7 +3,7 @@ from datetime import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import json
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple, Any
 import streamlit as st
 
 class Database:
@@ -40,7 +40,7 @@ class Database:
                 cur.execute('''
                     CREATE TABLE IF NOT EXISTS clients (
                         id SERIAL PRIMARY KEY,
-                        name VARCHAR(100) NOT NULL,
+                        name VARCHAR(100) NOT NULL UNIQUE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 ''')
@@ -118,19 +118,50 @@ class Database:
         try:
             self.ensure_connection()
             with self.conn.cursor() as cur:
+                # Get or create client
+                customer_id = probe_data.get('customer_id', '')
+                client_name = f"Customer {customer_id}"
+                
+                cur.execute('''
+                    INSERT INTO clients (name)
+                    VALUES (%s)
+                    ON CONFLICT (name) DO NOTHING
+                    RETURNING id
+                ''', (client_name,))
+                
+                client_result = cur.fetchone()
+                if client_result:
+                    client_id = client_result[0]
+                else:
+                    cur.execute('SELECT id FROM clients WHERE name = %s', (client_name,))
+                    client_id = cur.fetchone()[0]
+                
+                # Get or create site
+                site_id = probe_data.get('site_id', '')
+                site_name = f"Site {site_id}"
+                
+                cur.execute('''
+                    INSERT INTO sites (client_id, name)
+                    VALUES (%s, %s)
+                    ON CONFLICT (client_id, name) DO NOTHING
+                    RETURNING id
+                ''', (client_id, site_name))
+                
+                site_result = cur.fetchone()
+                if site_result:
+                    site_id_db = site_result[0]
+                else:
+                    cur.execute('SELECT id FROM sites WHERE client_id = %s AND name = %s', 
+                               (client_id, site_name))
+                    site_id_db = cur.fetchone()[0]
+                
                 # Get or create probe
                 cur.execute('''
-                    WITH default_site AS (
-                        SELECT s.id FROM sites s
-                        JOIN clients c ON s.client_id = c.id
-                        WHERE c.name = 'Default Client' AND s.name = 'Default Site'
-                        LIMIT 1
-                    )
                     INSERT INTO probes (site_id, probe_address)
-                    SELECT d.id, %s FROM default_site d
+                    VALUES (%s, %s)
                     ON CONFLICT (probe_address) DO NOTHING
                     RETURNING id
-                ''', (probe_data['address'],))
+                ''', (site_id_db, probe_data['address']))
 
                 probe_result = cur.fetchone()
                 if probe_result:
@@ -162,7 +193,158 @@ class Database:
             self.conn.rollback()
             raise
 
-    def get_measurement_history(self, probe_id: str, page: int = 1, per_page: int = 200) -> tuple[List[Dict], int]:
+    def get_clients(self) -> List[Dict]:
+        """
+        Get all clients from the database
+        
+        Returns:
+            List[Dict]: List of client dictionaries with id and name
+        """
+        try:
+            self.ensure_connection()
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute('SELECT id, name FROM clients ORDER BY name')
+                return cur.fetchall()
+        except Exception as e:
+            st.error(f"Error fetching clients: {str(e)}")
+            return []
+    
+    def get_sites_for_client(self, client_id: int) -> List[Dict]:
+        """
+        Get all sites for a specific client
+        
+        Args:
+            client_id (int): Client ID
+            
+        Returns:
+            List[Dict]: List of site dictionaries with id and name
+        """
+        try:
+            self.ensure_connection()
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute('''
+                    SELECT id, name 
+                    FROM sites 
+                    WHERE client_id = %s
+                    ORDER BY name
+                ''', (client_id,))
+                return cur.fetchall()
+        except Exception as e:
+            st.error(f"Error fetching sites for client {client_id}: {str(e)}")
+            return []
+    
+    def get_probes_for_site(self, site_id: int) -> List[Dict]:
+        """
+        Get all probes for a specific site
+        
+        Args:
+            site_id (int): Site ID
+            
+        Returns:
+            List[Dict]: List of probe dictionaries with id and probe_address
+        """
+        try:
+            self.ensure_connection()
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute('''
+                    SELECT id, probe_address 
+                    FROM probes 
+                    WHERE site_id = %s
+                    ORDER BY probe_address
+                ''', (site_id,))
+                return cur.fetchall()
+        except Exception as e:
+            st.error(f"Error fetching probes for site {site_id}: {str(e)}")
+            return []
+    
+    def get_latest_measurement(self, probe_address: str) -> Optional[Dict]:
+        """
+        Get the latest measurement for a specific probe
+        
+        Args:
+            probe_address (str): Probe address
+            
+        Returns:
+            Optional[Dict]: Measurement data or None if no measurements exist
+        """
+        try:
+            self.ensure_connection()
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute('''
+                    SELECT 
+                        p.probe_address,
+                        c.id as client_id,
+                        c.name as client_name,
+                        s.id as site_id,
+                        s.name as site_name,
+                        m.timestamp as datetime,
+                        m.status as probe_status,
+                        '0' as alarm_status,
+                        '0' as tank_status,
+                        m.product,
+                        m.water,
+                        m.density,
+                        m.discriminator,
+                        m.temperatures
+                    FROM measurements m
+                    JOIN probes p ON m.probe_id = p.id
+                    JOIN sites s ON p.site_id = s.id
+                    JOIN clients c ON s.client_id = c.id
+                    WHERE p.probe_address = %s
+                    ORDER BY m.timestamp DESC
+                    LIMIT 1
+                ''', (probe_address,))
+                
+                result = cur.fetchone()
+                if result:
+                    # Convert to compatible format with XML parser output
+                    # Unpack JSON data
+                    if isinstance(result['temperatures'], str):
+                        result['temperatures'] = json.loads(result['temperatures'])
+                    
+                    # Add address key for compatibility
+                    result['address'] = result['probe_address']
+                    
+                    # Format datetime
+                    if isinstance(result['datetime'], datetime):
+                        result['datetime'] = result['datetime'].strftime('%Y-%m-%d %H:%M:%S')
+                        
+                    return result
+                    
+                return None
+        except Exception as e:
+            st.error(f"Error fetching latest measurement for probe {probe_address}: {str(e)}")
+            return None
+    
+    def measurement_exists(self, probe_address: str, timestamp: str) -> bool:
+        """
+        Check if a measurement already exists for a specific probe and timestamp
+        
+        Args:
+            probe_address (str): Probe address
+            timestamp (str): Timestamp in 'YYYY-MM-DD HH:MM:SS' format
+            
+        Returns:
+            bool: True if measurement exists, False otherwise
+        """
+        try:
+            self.ensure_connection()
+            with self.conn.cursor() as cur:
+                cur.execute('''
+                    SELECT 1
+                    FROM measurements m
+                    JOIN probes p ON m.probe_id = p.id
+                    WHERE p.probe_address = %s
+                    AND m.timestamp = %s
+                    LIMIT 1
+                ''', (probe_address, datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')))
+                
+                return cur.fetchone() is not None
+        except Exception as e:
+            st.error(f"Error checking if measurement exists: {str(e)}")
+            return False
+            
+    def get_measurement_history(self, probe_id: str, page: int = 1, per_page: int = 200) -> Tuple[List[Dict], int]:
         try:
             self.ensure_connection()
             offset = (page - 1) * per_page
