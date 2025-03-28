@@ -69,16 +69,9 @@ class Database:
 
     def create_tables(self):
         """Create database schema if it doesn't exist"""
-        # Drop all tables for a fresh start
         try:
             with self.conn.cursor() as cur:
-                # Drop tables in reverse order of their dependencies
-                cur.execute("DROP TABLE IF EXISTS measurements CASCADE")
-                cur.execute("DROP TABLE IF EXISTS probes CASCADE")
-                cur.execute("DROP TABLE IF EXISTS sites CASCADE")
-                cur.execute("DROP TABLE IF EXISTS clients CASCADE")
-                
-                # Now create tables
+                # Create tables if they don't exist
                 
                 # Create clients table
                 cur.execute('''
@@ -285,8 +278,9 @@ class Database:
                 if ullage == '':
                     ullage = 0.0
                 
-                discriminator = probe_data.get('discriminator', 'N')
-                if discriminator == '':
+                # Make sure discriminator is never null or empty
+                discriminator = probe_data.get('discriminator')
+                if discriminator is None or discriminator == '':
                     discriminator = 'N'
                 
                 # Insert the measurement

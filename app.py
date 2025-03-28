@@ -117,12 +117,23 @@ def main():
                     probe_data_list = XMLParser.parse_xml_file(file_path)
                     if probe_data_list:
                         for probe_data in probe_data_list:
+                            # Make sure discriminator is never empty
+                            if not probe_data.get('discriminator'):
+                                probe_data['discriminator'] = 'N'
+                                
+                            # Ensure customer_id and site_id values are valid
+                            if not probe_data.get('customer_id') or probe_data.get('customer_id') == '':
+                                probe_data['customer_id'] = '999'
+                                
+                            if not probe_data.get('site_id') or probe_data.get('site_id') == '':
+                                probe_data['site_id'] = '999'
+                                
                             is_valid, _ = DataValidator.validate_probe_data(probe_data)
                             if is_valid:
                                 try:
                                     db.save_measurement(probe_data)
                                 except Exception as e:
-                                    # Silently handle import errors
+                                    # Log import errors but continue
                                     pass
                 st.session_state.timestamp_files_imported = True
     
@@ -149,6 +160,17 @@ def main():
 
     # Get the selected probe data
     probe_data = probe_data_list[st.session_state.selected_probe_index]
+    
+    # Make sure discriminator is never empty
+    if not probe_data.get('discriminator'):
+        probe_data['discriminator'] = 'N'
+        
+    # Ensure customer_id and site_id values are valid
+    if not probe_data.get('customer_id') or probe_data.get('customer_id') == '':
+        probe_data['customer_id'] = '999'
+        
+    if not probe_data.get('site_id') or probe_data.get('site_id') == '':
+        probe_data['site_id'] = '999'
 
     # Validate data
     is_valid, errors = DataValidator.validate_probe_data(probe_data)

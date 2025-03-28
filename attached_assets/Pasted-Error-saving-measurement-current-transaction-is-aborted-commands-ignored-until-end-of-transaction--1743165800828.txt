@@ -1,0 +1,19 @@
+Error saving measurement: current transaction is aborted, commands ignored until end of transaction block
+
+Error saving measurement: Failed to insert measurement: null value in column "discriminator" of relation "measurements" violates not-null constraint DETAIL: Failing row contains (2, 2, 2025-03-06 10:19:49, 0, 1003.70, 0.00, 1234.56, null, [15.3, 14.9, 15.5, 15.0, 14.6], 0, 0, 0, 13647.12, 2025-03-28 12:41:07.332134).
+
+Error saving measurement: insert or update on table "sites" violates foreign key constraint "sites_client_id_fkey" DETAIL: Key (client_id)=(6) is not present in table "clients".
+
+Error saving measurement: Failed to insert measurement: null value in column "discriminator" of relation "measurements" violates not-null constraint DETAIL: Failing row contains (4, 4, 2025-03-06 10:17:44, 0, 1003.70, 0.00, 1234.56, null, [15.3, 14.9, 15.5, 15.0, 14.6], 0, 0, 0, 13647.12, 2025-03-28 12:41:07.985636).
+
+Error saving measurement: current transaction is aborted, commands ignored until end of transaction block
+
+Error saving measurement: Failed to insert measurement: null value in column "discriminator" of relation "measurements" violates not-null constraint DETAIL: Failing row contains (6, 6, 2025-03-06 10:15:39, 0, 1003.70, 0.00, 1234.56, null, [15.3, 14.9, 15.5, 15.0, 14.6], 0, 0, 0, 13647.12, 2025-03-28 12:41:08.666807).
+
+Error saving measurement: insert or update on table "probes" violates foreign key constraint "probes_site_id_fkey" DETAIL: Key (site_id)=(12) is not present in table "sites".
+
+Error saving measurement: Failed to insert measurement: null value in column "discriminator" of relation "measurements" violates not-null constraint DETAIL: Failing row contains (9, 10, 2025-03-06 10:13:35, 0, 1003.70, 0.00, 1234.56, null, [15.3, 14.9, 15.5, 15.0, 14.6], 0, 0, 0, 13647.12, 2025-03-28 12:41:10.001652).
+
+Error saving measurement: Failed to insert measurement: null value in column "discriminator" of relation "measurements" violates not-null constraint DETAIL: Failing row contains (10, 12, 2025-03-06 10:12:32, 0, 1003.70, 0.00, 1234.56, null, [15.3, 14.9, 15.5, 15.0, 14.6], 0, 0, 0, 13647.12, 2025-03-28 12:41:10.165824).
+
+Error saving measurement: Failed to insert measurement: null value in column "discriminator" of relation "measurements" violates not-null constraint DETAIL: Failing row contains (11, 13, 2025-03-06 10:11:30, 0, 1003.70, 0.00, 1234.56, null, [15.3, 14.9, 15.5, 15.0, 14.6], 0, 0, 0, 13647.12, 2025-03-28 12:41:10.546839).

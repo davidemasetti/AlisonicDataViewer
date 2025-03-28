@@ -82,7 +82,7 @@ class XMLParser:
                     'water': probe.find('Water').text if probe.find('Water') is not None else '0.0',
                     'density': probe.find('Density').text if probe.find('Density') is not None else '0.0',
                     'phs': probe.find('Phs').text if probe.find('Phs') is not None else '',
-                    'discriminator': probe.find('Discriminator').text if probe.find('Discriminator') is not None else 'N',
+                    'discriminator': probe.find('Discriminator').text if probe.find('Discriminator') is not None and probe.find('Discriminator').text else 'N',
                     'temperatures': temp_values
                 }
                 probe_data_list.append(probe_data)
