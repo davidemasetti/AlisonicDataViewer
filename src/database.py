@@ -1,41 +1,85 @@
 import os
+import time
 from datetime import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import json
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 import streamlit as st
 
 class Database:
     def __init__(self):
         self.conn = None
-        self.connect()
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                self.connect()
+                # If we get here, connection was successful
+                break
+            except Exception as e:
+                st.error(f"Database connection attempt {attempt+1}/{max_attempts} failed: {str(e)}")
+                if attempt < max_attempts - 1:
+                    # Wait before retrying
+                    time.sleep(1)
+                else:
+                    # Last attempt failed
+                    raise
 
     def connect(self):
         """Establish database connection"""
         try:
-            if self.conn is None or self.conn.closed:
-                self.conn = psycopg2.connect(os.environ['DATABASE_URL'])
-                self.create_tables()
+            # Always close the old connection if it exists
+            if hasattr(self, 'conn') and self.conn is not None:
+                try:
+                    self.conn.close()
+                except:
+                    pass  # Ignore errors on closing
+                
+            # Create a fresh connection
+            self.conn = psycopg2.connect(os.environ['DATABASE_URL'])
+            self.conn.autocommit = False  # Explicitly manage transactions
+            
+            # Initialize the database schema
+            self.create_tables()
+            return True
         except Exception as e:
+            if hasattr(self, 'conn') and self.conn is not None:
+                try:
+                    self.conn.close()
+                except:
+                    pass
+            self.conn = None
             st.error(f"Database connection error: {str(e)}")
             raise
 
     def ensure_connection(self):
         """Ensure database connection is active"""
+        if self.conn is None or self.conn.closed:
+            return self.connect()
+            
+        # Test the connection
         try:
-            if self.conn is None or self.conn.closed:
-                self.connect()
-            # Test the connection
             with self.conn.cursor() as cur:
                 cur.execute('SELECT 1')
-        except Exception as e:
-            st.error(f"Lost database connection, attempting to reconnect: {str(e)}")
-            self.connect()
+                cur.fetchone()
+            return True
+        except Exception:
+            # Connection is broken, create a new one
+            return self.connect()
 
     def create_tables(self):
-        with self.conn.cursor() as cur:
-            try:
+        """Create database schema if it doesn't exist"""
+        # Drop all tables for a fresh start
+        try:
+            with self.conn.cursor() as cur:
+                # Drop tables in reverse order of their dependencies
+                cur.execute("DROP TABLE IF EXISTS measurements CASCADE")
+                cur.execute("DROP TABLE IF EXISTS probes CASCADE")
+                cur.execute("DROP TABLE IF EXISTS sites CASCADE")
+                cur.execute("DROP TABLE IF EXISTS clients CASCADE")
+                
+                # Now create tables
+                
                 # Create clients table
                 cur.execute('''
                     CREATE TABLE IF NOT EXISTS clients (
@@ -86,18 +130,9 @@ class Database:
                     )
                 ''')
                 
-                # Add unique constraint in a separate command for better error handling
-                try:
-                    cur.execute('''
-                        ALTER TABLE measurements 
-                        ADD CONSTRAINT unique_probe_timestamp UNIQUE (probe_id, timestamp)
-                    ''')
-                except Exception:
-                    # Constraint might already exist, which is fine
-                    pass
-
                 # Create indexes for better query performance
                 cur.execute('CREATE INDEX IF NOT EXISTS idx_measurements_timestamp ON measurements(timestamp DESC)')
+                cur.execute('CREATE INDEX IF NOT EXISTS idx_measurements_probe_timestamp ON measurements(probe_id, timestamp)')
                 cur.execute('CREATE INDEX IF NOT EXISTS idx_probes_address ON probes(probe_address)')
                 cur.execute('CREATE INDEX IF NOT EXISTS idx_sites_client ON sites(client_id)')
 
@@ -105,89 +140,121 @@ class Database:
                 cur.execute('''
                     INSERT INTO clients (name)
                     VALUES ('Default Client')
-                    ON CONFLICT DO NOTHING
+                    ON CONFLICT (name) DO NOTHING
                     RETURNING id
                 ''')
-                client_id = cur.fetchone()
-                if client_id:
-                    client_id = client_id[0]
+                result = cur.fetchone()
+                if result:
+                    client_id = result[0]
                 else:
+                    # Get the ID if the client already exists
                     cur.execute("SELECT id FROM clients WHERE name = 'Default Client'")
-                    client_id = cur.fetchone()[0]
-
-                cur.execute('''
-                    INSERT INTO sites (client_id, name)
-                    VALUES (%s, 'Default Site')
-                    ON CONFLICT DO NOTHING
-                ''', (client_id,))
+                    result = cur.fetchone()
+                    client_id = result[0] if result else None
+                
+                if client_id:
+                    cur.execute('''
+                        INSERT INTO sites (client_id, name)
+                        VALUES (%s, 'Default Site')
+                        ON CONFLICT (client_id, name) DO NOTHING
+                    ''', (client_id,))
 
                 self.conn.commit()
-            except Exception as e:
-                st.error(f"Error creating tables: {str(e)}")
-                self.conn.rollback()
-                raise
+                return True
+            
+        except Exception as e:
+            self.conn.rollback()
+            st.error(f"Error creating tables: {str(e)}")
+            raise
 
     def save_measurement(self, probe_data: Dict):
+        """Save a measurement to the database"""
         try:
             self.ensure_connection()
             with self.conn.cursor() as cur:
                 # Get or create client based on customer_id
-                customer_id = probe_data['customer_id']
+                customer_id = probe_data.get('customer_id', '0')
+                customer_name = f"Customer {customer_id}"
+                
                 cur.execute('''
                     INSERT INTO clients (name)
                     VALUES (%s)
                     ON CONFLICT (name) DO NOTHING
                     RETURNING id
-                ''', (f"Customer {customer_id}",))
-
-                client_result = cur.fetchone()
-                if client_result:
-                    client_id = client_result[0]
+                ''', (customer_name,))
+                
+                result = cur.fetchone()
+                if result:
+                    client_id = result[0]
                 else:
-                    cur.execute('SELECT id FROM clients WHERE name = %s', (f"Customer {customer_id}",))
-                    client_id = cur.fetchone()[0]
+                    cur.execute('SELECT id FROM clients WHERE name = %s', (customer_name,))
+                    result = cur.fetchone()
+                    client_id = result[0] if result else None
+
+                if not client_id:
+                    raise Exception(f"Failed to get or create client: {customer_name}")
 
                 # Get or create site based on site_id and client_id
-                site_id = probe_data['site_id']
+                site_id = probe_data.get('site_id', '0')
+                site_name = f"Site {site_id}"
+                
                 cur.execute('''
                     INSERT INTO sites (client_id, name)
                     VALUES (%s, %s)
                     ON CONFLICT (client_id, name) DO NOTHING
                     RETURNING id
-                ''', (client_id, f"Site {site_id}"))
-
-                site_result = cur.fetchone()
-                if site_result:
-                    db_site_id = site_result[0]
+                ''', (client_id, site_name))
+                
+                result = cur.fetchone()
+                if result:
+                    db_site_id = result[0]
                 else:
                     cur.execute('SELECT id FROM sites WHERE client_id = %s AND name = %s', 
-                                (client_id, f"Site {site_id}"))
-                    db_site_id = cur.fetchone()[0]
+                               (client_id, site_name))
+                    result = cur.fetchone()
+                    db_site_id = result[0] if result else None
+                
+                if not db_site_id:
+                    raise Exception(f"Failed to get or create site: {site_name}")
 
                 # Get or create probe
+                probe_address = probe_data.get('address', '')
+                if not probe_address:
+                    raise Exception("Missing probe address in data")
+                    
                 cur.execute('''
                     INSERT INTO probes (site_id, probe_address)
                     VALUES (%s, %s)
                     ON CONFLICT (probe_address) DO NOTHING
                     RETURNING id
-                ''', (db_site_id, probe_data['address']))
-
-                probe_result = cur.fetchone()
-                if probe_result:
-                    probe_id = probe_result[0]
-                else:
-                    cur.execute('SELECT id FROM probes WHERE probe_address = %s', (probe_data['address'],))
-                    probe_id = cur.fetchone()[0]
-
-                # Insert measurement
-                # The XML parser already converts . to : for us
-                try:
-                    measurement_timestamp = datetime.strptime(probe_data['datetime'], '%Y-%m-%d %H:%M:%S')
-                except ValueError as e:
-                    st.error(f"Invalid datetime format: {probe_data['datetime']}. Error: {str(e)}")
-                    # Set a default timestamp as fallback
-                    measurement_timestamp = datetime.now()
+                ''', (db_site_id, probe_address))
                 
+                result = cur.fetchone()
+                if result:
+                    probe_id = result[0]
+                else:
+                    cur.execute('SELECT id FROM probes WHERE probe_address = %s', (probe_address,))
+                    result = cur.fetchone()
+                    probe_id = result[0] if result else None
+                
+                if not probe_id:
+                    raise Exception(f"Failed to get or create probe: {probe_address}")
+
+                # Process timestamp
+                datetime_str = probe_data.get('datetime', '')
+                if not datetime_str:
+                    raise Exception("Missing datetime in probe data")
+                    
+                try:
+                    measurement_timestamp = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    try:
+                        # Try with dots between time components
+                        alt_datetime_str = datetime_str.replace('.', ':')
+                        measurement_timestamp = datetime.strptime(alt_datetime_str, '%Y-%m-%d %H:%M:%S')
+                    except ValueError as e:
+                        raise Exception(f"Invalid datetime format: {datetime_str}. Error: {str(e)}")
+
                 # Check if measurement already exists
                 cur.execute('''
                     SELECT id FROM measurements 
@@ -198,56 +265,66 @@ class Database:
                 
                 if existing_measurement:
                     # Skip if the measurement already exists
-                    pass
-                else:
-                    # Default values for missing fields
-                    probe_status = probe_data.get('probe_status', probe_data.get('status', 0))
-                    if probe_status == '':
-                        probe_status = 0
-                        
-                    alarm_status = probe_data.get('alarm_status', 0)
-                    if alarm_status == '':
-                        alarm_status = 0
-                        
-                    tank_status = probe_data.get('tank_status', 0)
-                    if tank_status == '':
-                        tank_status = 0
-                        
-                    ullage = probe_data.get('ullage', 0.0)
-                    if ullage == '':
-                        ullage = 0.0
+                    self.conn.commit()
+                    return
+                
+                # Default values for missing fields
+                probe_status = probe_data.get('probe_status', probe_data.get('status', 0))
+                if probe_status == '':
+                    probe_status = 0
                     
-                    discriminator = probe_data.get('discriminator', 'N')
-                    if discriminator == '':
-                        discriminator = 'N'
+                alarm_status = probe_data.get('alarm_status', 0)
+                if alarm_status == '':
+                    alarm_status = 0
                     
-                    # Insert without ON CONFLICT clause
+                tank_status = probe_data.get('tank_status', 0)
+                if tank_status == '':
+                    tank_status = 0
+                    
+                ullage = probe_data.get('ullage', 0.0)
+                if ullage == '':
+                    ullage = 0.0
+                
+                discriminator = probe_data.get('discriminator', 'N')
+                if discriminator == '':
+                    discriminator = 'N'
+                
+                # Insert the measurement
+                try:
                     cur.execute('''
                         INSERT INTO measurements 
-                        (probe_id, timestamp, status, product, water, density, discriminator, temperatures,
-                         probe_status, alarm_status, tank_status, ullage)
+                        (probe_id, timestamp, status, product, water, density, discriminator, 
+                         temperatures, probe_status, alarm_status, tank_status, ullage)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ''', (
                         probe_id,
                         measurement_timestamp,
                         str(probe_status),
-                        float(probe_data['product']),
-                        float(probe_data['water']),
-                        float(probe_data['density']),
+                        float(probe_data.get('product', 0)),
+                        float(probe_data.get('water', 0)),
+                        float(probe_data.get('density', 0)),
                         discriminator,
-                        json.dumps(probe_data['temperatures']),
+                        json.dumps(probe_data.get('temperatures', [])),
                         int(probe_status),
                         int(alarm_status),
                         int(tank_status),
                         float(ullage)
                     ))
-                self.conn.commit()
+                    self.conn.commit()
+                except Exception as e:
+                    self.conn.rollback()
+                    raise Exception(f"Failed to insert measurement: {str(e)}")
+                    
         except Exception as e:
+            try:
+                self.conn.rollback()
+            except:
+                pass
             st.error(f"Error saving measurement: {str(e)}")
-            self.conn.rollback()
-            raise
+            # Don't raise the exception here to avoid breaking the app flow
 
-    def get_measurement_history(self, probe_id: str, page: int = 1, per_page: int = 200) -> tuple[List[Dict], int]:
+    def get_measurement_history(self, probe_id: str, page: int = 1, per_page: int = 200) -> Tuple[List[Dict], int]:
+        """Get measurement history for a probe"""
         try:
             self.ensure_connection()
             offset = (page - 1) * per_page
