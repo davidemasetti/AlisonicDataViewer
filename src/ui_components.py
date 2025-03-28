@@ -104,17 +104,36 @@ def render_measurement_history(records, total_records, page: int = 1, per_page: 
         st.info("No historical data available yet.")
         return
 
-    # Convert records to pandas DataFrame for better display
-    df = pd.DataFrame(records)
-
-    # Format timestamp
-    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
+    try:
+        # Convert records to pandas DataFrame for better display
+        df = pd.DataFrame(records)
+        
+        # Handle potential missing columns to avoid errors
+        expected_columns = ['timestamp', 'probe_address', 'status', 'probe_status', 
+                           'alarm_status', 'tank_status', 'product', 'water', 
+                           'density', 'ullage', 'discriminator']
+        
+        for col in expected_columns:
+            if col not in df.columns:
+                df[col] = None
+        
+        # Format timestamp - handle possible null values
+        if 'timestamp' in df.columns:
+            # Replace NaN or None values with a placeholder
+            df['timestamp'] = df['timestamp'].fillna('N/A')
+            # Only format datetime values, not the placeholders
+            mask = df['timestamp'] != 'N/A'
+            if mask.any():
+                df.loc[mask, 'timestamp'] = pd.to_datetime(df.loc[mask, 'timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
+    except Exception as e:
+        st.error(f"Error processing measurement data: {str(e)}")
+        return
 
     # Reorder and rename columns
     columns = {
         'timestamp': 'Timestamp',
         'probe_address': 'Probe Address',
-        'status': 'Probe Status',
+        'status': 'Status',  # Renamed to avoid duplication with probe_status
         'probe_status': 'Probe Status',
         'alarm_status': 'Alarm Status',
         'tank_status': 'Tank Status',
@@ -128,8 +147,26 @@ def render_measurement_history(records, total_records, page: int = 1, per_page: 
     # Filter out columns that don't exist in the dataframe
     available_columns = {k: v for k, v in columns.items() if k in df.columns}
     
+    # Check for potential duplicate column names after renaming
+    if len(set(available_columns.values())) < len(available_columns.values()):
+        # There are duplicate column names, let's create a safe mapping
+        used_names = set()
+        safe_columns = {}
+        for k, v in available_columns.items():
+            if v in used_names:
+                # Append a number to make unique
+                count = 1
+                while f"{v} ({count})" in used_names:
+                    count += 1
+                safe_columns[k] = f"{v} ({count})"
+                used_names.add(f"{v} ({count})")
+            else:
+                safe_columns[k] = v
+                used_names.add(v)
+        available_columns = safe_columns
+    
     # Apply column renaming
-    df = df[available_columns.keys()].rename(columns=available_columns)
+    df = df[list(available_columns.keys())].rename(columns=available_columns)
 
     # Display table with pagination info
     st.dataframe(df, use_container_width=True)
