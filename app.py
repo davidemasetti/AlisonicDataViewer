@@ -22,8 +22,13 @@ XML_FILES = [
 # Additional timestamp files
 TIMESTAMP_FILES = []
 for file in os.listdir("attached_assets"):
-    if file.endswith(".xml") and " - " in file:
+    if file.lower().endswith(".xml") and " - " in file:
         TIMESTAMP_FILES.append(os.path.join("attached_assets", file))
+
+# Add the alisonic_probes.xml file which contains probe 012345
+ALISONIC_FILE = "attached_assets/alisonic_probes.xml"
+if os.path.exists(ALISONIC_FILE):
+    XML_FILES.append(ALISONIC_FILE)
 
 # Initialize database connection using Streamlit's cache
 @st.cache_resource
@@ -83,11 +88,25 @@ def main():
                                value=3)
                                
         st.markdown("### Site Selection")
+        def format_site_name(path):
+            filename = path.split('/')[-1]
+            if "alisonic" in path.lower():
+                return "Site alisonic_probes (012345)"
+            elif "-" in filename:
+                # For S1-C435-S1531-XXXXXXXX.XML format
+                parts = filename.split('-')
+                if len(parts) >= 3:
+                    return f"Site {parts[1]}-{parts[2]}"
+                else:
+                    return filename
+            else:
+                return filename
+
         selected_xml = st.selectbox(
             "Select Site XML",
             XML_FILES,
-            index=st.session_state.selected_xml_index,
-            format_func=lambda x: f"Site {x.split('/')[-1].split('-')[1]}-{x.split('/')[-1].split('-')[2].split('-')[0]}"
+            index=min(st.session_state.selected_xml_index, len(XML_FILES)-1),
+            format_func=format_site_name
         )
         st.session_state.selected_xml_index = XML_FILES.index(selected_xml)
         

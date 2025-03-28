@@ -41,6 +41,7 @@ class XMLParser:
                 # Format datetime (replace '.' with ':' for database compatibility)
                 datetime_str = probe.find('DateTime').text if probe.find('DateTime') is not None else ''
                 if datetime_str:
+                    # Replace all dots with colons in the time part for consistent format
                     datetime_str = datetime_str.replace('.', ':')
 
                 # Create probe data dictionary

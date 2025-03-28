@@ -171,27 +171,46 @@ class Database:
                     probe_id = cur.fetchone()[0]
 
                 # Insert measurement
-                measurement_timestamp = datetime.strptime(probe_data['datetime'], '%Y-%m-%d %H:%M:%S')
+                # The XML parser already converts . to : for us
+                try:
+                    measurement_timestamp = datetime.strptime(probe_data['datetime'], '%Y-%m-%d %H:%M:%S')
+                except ValueError as e:
+                    st.error(f"Invalid datetime format: {probe_data['datetime']}. Error: {str(e)}")
+                    # Set a default timestamp as fallback
+                    measurement_timestamp = datetime.now()
+                
+                # Check if measurement already exists
                 cur.execute('''
-                    INSERT INTO measurements 
-                    (probe_id, timestamp, status, product, water, density, discriminator, temperatures,
-                     probe_status, alarm_status, tank_status, ullage)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (probe_id, timestamp) DO NOTHING
-                ''', (
-                    probe_id,
-                    measurement_timestamp,
-                    probe_data['probe_status'],
-                    float(probe_data['product']),
-                    float(probe_data['water']),
-                    float(probe_data['density']),
-                    probe_data['discriminator'],
-                    json.dumps(probe_data['temperatures']),
-                    int(probe_data['probe_status']),
-                    int(probe_data['alarm_status']),
-                    int(probe_data['tank_status']),
-                    float(probe_data['ullage'])
-                ))
+                    SELECT id FROM measurements 
+                    WHERE probe_id = %s AND timestamp = %s
+                ''', (probe_id, measurement_timestamp))
+                
+                existing_measurement = cur.fetchone()
+                
+                if existing_measurement:
+                    # Skip if the measurement already exists
+                    pass
+                else:
+                    # Insert new measurement
+                    cur.execute('''
+                        INSERT INTO measurements 
+                        (probe_id, timestamp, status, product, water, density, discriminator, temperatures,
+                         probe_status, alarm_status, tank_status, ullage)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ''', (
+                        probe_id,
+                        measurement_timestamp,
+                        probe_data['probe_status'],
+                        float(probe_data['product']),
+                        float(probe_data['water']),
+                        float(probe_data['density']),
+                        probe_data['discriminator'],
+                        json.dumps(probe_data['temperatures']),
+                        int(probe_data['probe_status']),
+                        int(probe_data['alarm_status']),
+                        int(probe_data['tank_status']),
+                        float(probe_data['ullage'])
+                    ))
                 self.conn.commit()
         except Exception as e:
             st.error(f"Error saving measurement: {str(e)}")
