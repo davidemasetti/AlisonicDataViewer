@@ -19,6 +19,14 @@ author = "agent"
 task = "workflow.run"
 args = "Streamlit Dashboard"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Proxy"
+
 [[workflows.workflow]]
 name = "Streamlit Dashboard"
 author = "agent"
@@ -34,6 +42,43 @@ task = "shell.exec"
 args = "streamlit run app.py"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "API Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python api_server.py"
+waitForPort = 8000
+
+[[workflows.workflow]]
+name = "API Proxy"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python api_proxy.py"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3000
+
+[[ports]]
+localPort = 8000
+externalPort = 8000

@@ -1,6 +1,9 @@
 import streamlit as st
 import time
 import os
+import requests
+from io import BytesIO
+import json
 from src.xml_parser import XMLParser
 from src.data_validator import DataValidator
 from src.database import Database
